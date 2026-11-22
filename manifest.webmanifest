@@ -1,1 +1,1 @@
-{"name": "논술 기출 지도", "short_name": "논술 지도", "start_url": "./", "display": "standalone", "background_color": "#ffffff", "theme_color": "#ffffff", "icons": [{"src": "icon-192.png", "sizes": "192x192", "type": "image/png"}, {"src": "icon-512.png", "sizes": "512x512", "type": "image/png"}]}
+{"name": "논술", "short_name": "논술", "start_url": "./", "display": "standalone", "background_color": "#ffffff", "theme_color": "#ffffff", "icons": [{"src": "icon-192.png", "sizes": "192x192", "type": "image/png"}, {"src": "icon-512.png", "sizes": "512x512", "type": "image/png"}]}
