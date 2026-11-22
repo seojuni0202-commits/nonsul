@@ -258,6 +258,13 @@ body{word-break:keep-all;overflow-wrap:break-word}
 /* 해설 맨 앞 출제 의도 */
 .typed .intent{margin:0 0 1.4em;padding:0 0 1.1em;border-bottom:1px solid rgba(17,24,39,.12)}
 .typed .intent h3{margin-top:0}
+/* 카드 미리보기 */
+.card .pv.rich{position:relative;max-height:210px;overflow:hidden;border:1px solid var(--line);border-radius:8px;background:#fff;margin:2px 0}
+.card .pv.rich::after{content:"";position:absolute;left:0;right:0;bottom:0;height:56px;background:linear-gradient(rgba(255,255,255,0),#fff)}
+.card .pv .pvdoc{max-width:none;border:0;background:none;font-size:.84rem;line-height:1.6;padding:10px 12px;pointer-events:none}
+.card .pv .pvdoc p{display:block;-webkit-line-clamp:unset;overflow:visible;font-size:inherit;margin:0 0 .5em;color:var(--ink)}
+.card .pv .pvdoc .psg{padding:8px 10px;margin:.2em 0 .7em}
+.card .pv .pvdoc mjx-container[display="true"]{margin:.3em 0!important}
 /* 흰 바탕·가독성 개편 */
 body{background:#fff}
 header.top{background:#fff;background-image:none}
@@ -518,11 +525,26 @@ function drawHist(){
     if(y===y0||y===y1||(y%5===0&&y-y0>2&&y1-y>2))h+=`<text x="${x+bw/2}" y="${H-1}" text-anchor="middle">${y}</text>`}
   svg.innerHTML=h;
 }
+// 카드 미리보기: 문제 화면(제시문 상자·수식)을 작게 미리 보여 줌
+const pvObs=('IntersectionObserver' in window)?new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){pvObs.unobserve(e.target);fillPv(e.target)}}),{rootMargin:'300px'}):null;
+new MutationObserver(ms=>{for(const m of ms)for(const n of m.addedNodes){if(n.nodeType!==1)continue;(n.matches&&n.matches('.pv[data-pv]')?[n]:[...n.querySelectorAll('.pv[data-pv]')]).forEach(el=>pvObs?pvObs.observe(el):fillPv(el))}}).observe(document.body,{childList:true,subtree:true});
+async function fillPv(el){
+  const o=ORIG[+el.dataset.pv];if(!o||!o.q.length||!o.q.every(k=>TPIDX[k]))return;
+  const parts=[];for(const k of o.q){const pk=await getTPack(TPIDX[k]);const t=(pk[k]||'').trim();if(t)parts.push(t)}
+  if(!parts.length)return;
+  const d=document.createElement('div');d.className='typed pvdoc';d.innerHTML=mdMath(parts.join('\n\n'));
+  pullIntent(d);
+  d.querySelectorAll('blockquote.meta,h1,h2,h3,h4,h5,hr,.tw').forEach(x=>x.remove());
+  [...d.children].forEach(x=>{if(x.tagName==='P'&&x.textContent.trim().length<25&&!x.querySelector('mjx-container')&&/카드|문항\s*\d|^\[?문항/.test(x.textContent))x.remove()});
+  if(!d.textContent.trim())return;
+  el.innerHTML='';el.appendChild(d);el.classList.add('rich');
+  if(window.MathJax&&MathJax.typesetPromise){try{await MathJax.typesetPromise([d])}catch(e){}}
+}
 function card(i){
   const tags=i.tags.map(t=>`<button type="button" class="tag${META.rareSet.has(t)?' rare':''}" data-tag="${esc(t)}" title="${esc(tagDesc(t)||'이 논리를 쓴 문항 보기')}">${esc(tagName(t))}</button>`).join('');
   const st=rec.get(i.id).st,o=ORIG[i.id];
   return `<article class="card" tabindex="0" data-i="${i.id}"><div class="hd"><b>${esc(disp(i.s))}</b><span>${esc(i.y)}</span><span class="pill${i.k!=='본'?' mock':''}">${esc(i.k)}</span>${trPill(i)}<span>${esc(i.g)}</span><span>${esc(i.q)}</span></div>
-  ${i.u?`<div class="unit">${esc(i.u)}</div>`:''}<p>${esc(i.idea)}</p>${i.key?`<div class="key">${esc(i.key)}</div>`:''}<div class="tags">${tags}</div><div class="open">${o&&o.q.length?'문제 열기 →':'요약만 있음 · 열기 →'}${st?`<span class="st ${st}">${ST_LAB[st]}</span>`:''}</div></article>`;
+  ${i.u?`<div class="unit">${esc(i.u)}</div>`:''}<div class="pv" data-pv="${i.id}"><p>${esc(i.idea)}</p></div>${i.key?`<div class="key">${esc(i.key)}</div>`:''}<div class="tags">${tags}</div><div class="open">${o&&o.q.length?'문제 열기 →':'요약만 있음 · 열기 →'}${st?`<span class="st ${st}">${ST_LAB[st]}</span>`:''}</div></article>`;
 }
 function renderCards(){
   const el=$('#cards');
