@@ -324,6 +324,8 @@ body{word-break:keep-all;overflow-wrap:break-word}
 .cbx-pop .cbx-g.fav{color:#b45309}
 .swrap{position:relative}.swrap .sbtn{width:100%;height:100%}
 .sgstar{position:absolute;top:10px;right:10px;z-index:1;font-size:1.15rem}
+.doc a[href^="#q-"]{color:var(--blue);font-weight:600;text-decoration:none;border-bottom:1px solid rgba(39,84,197,.35)}
+.doc a[href^="#q-"]:hover{border-bottom-color:var(--blue)}
 /* 흰 바탕·가독성 개편 */
 body{background:#fff}
 header.top{background:#fff;background-image:none}
@@ -407,6 +409,7 @@ h2{font-size:1.55rem;margin:0 0 16px;letter-spacing:-.01em}
   <a href="#items" data-v="items">기출 검색</a>
   <a href="#schools" data-v="schools">학교별 분석</a>
   <a href="#concepts" data-v="concepts">필수 개념</a>
+  <a href="#prep" data-v="prep">2027 대비</a>
   <a href="#graph" data-v="graph">학교 간 연관</a>
   <a href="#scores" data-v="scores">합격자 점수</a>
   <a href="#overview" data-v="overview">종합·현황</a>
@@ -491,6 +494,12 @@ h2{font-size:1.55rem;margin:0 0 16px;letter-spacing:-.01em}
   <h2>필수 개념</h2>
   <div class="ssearch"><input type="search" id="cq" placeholder="개념 찾기 (예: 평균값, 부분적분, 조건부확률, 유전)" aria-label="개념 검색" autocomplete="off"></div>
   <div class="clay"><nav class="clist" id="clist" aria-label="개념 목록"></nav><article class="cdoc doc" id="cdoc"></article></div>
+</section>
+
+<section id="v-prep" hidden>
+  <h2>2027 대비</h2>
+  <div class="subtabs" id="psub"></div>
+  <div id="pbody"></div>
 </section>
 
 <section id="v-overview" hidden>
@@ -812,6 +821,26 @@ async function openConcept(id){
   const b=$('#cToItems');if(b)b.onclick=()=>{CONCEPT_FILTER=c;location.hash='items';setTimeout(()=>{['#q','#fs','#fy','#fk','#fg','#ft','#fm'].forEach(x=>$(x).value='');applyItems()},0)};
 }
 let CONCEPT_FILTER=null;
+// 2027 대비 탭
+let PIDX2=null;
+async function openPrep(id){
+  if(!PIDX2){try{PIDX2=await fetch('prep/index.json').then(r=>r.json())}catch(e){PIDX2=[]}}
+  if(!id)id=(PIDX2[0]||{}).id;
+  $('#psub').innerHTML=PIDX2.map(x=>`<button type="button" data-p="${esc(x.id)}" aria-pressed="${x.id===id}">${esc(disp(x.n))}</button>`).join('');
+  const el=$('#pbody');if(!id){el.innerHTML='<p class="note">준비된 학교가 없어요.</p>';return}
+  el.innerHTML='<div class="doc"><p class="note">불러오는 중…</p></div>';
+  let t='';try{const r=await fetch('prep/'+id+'.md');t=r.ok?await r.text():''}catch(e){}
+  el.innerHTML='<div class="doc">'+md(t)+'</div>';typeset(el);markPrep(el);
+}
+function markPrep(el){
+  el.querySelectorAll('a[href^="#q-"]').forEach(a=>{const id=+a.getAttribute('href').slice(3);const st=rec.get(id).st;
+    a.insertAdjacentHTML('afterend',st?` <span class="st ${st}">${ST_LAB[st]}</span>`:'')})
+}
+$('#psub').addEventListener('click',e=>{const b=e.target.closest('[data-p]');if(b)location.hash='prep-'+b.dataset.p});
+document.addEventListener('click',e=>{const a=e.target.closest('a[href^="#q-"]');if(!a)return;e.preventDefault();
+  const id=+a.getAttribute('href').slice(3);if(!ITEMS[id])return;
+  const scope=a.closest('.doc')||document;const ids=[...new Set([...scope.querySelectorAll('a[href^="#q-"]')].map(x=>+x.getAttribute('href').slice(3)))].filter(x=>ITEMS[x]);
+  openSolve(id,ids.map(x=>ITEMS[x]))});
 function openSchool(id){
   const s=META.schools.find(x=>x.id===id);if(!s){location.hash='schools';return}
   curSchool=s;$('#sn').textContent=disp(s.n);
@@ -987,7 +1016,7 @@ function openSolve(id,list){
   svList=list&&list.length?list:[ITEMS[id]];svIdx=svList.findIndex(i=>i.id===id);if(svIdx<0){svList=[ITEMS[id]];svIdx=0}
   $('#solve').hidden=false;document.body.style.overflow='hidden';showSolve();$('#svClose').focus();
 }
-function closeSolve(){saveMemo();if(window.NSM&&NSM.onClose)NSM.onClose();$('#solve').hidden=true;document.body.style.overflow='';renderCards();const c=document.querySelector(`.card[data-i="${svCur?svCur.id:-1}"]`);if(c)c.focus()}
+function closeSolve(){saveMemo();setTimeout(()=>{if(!$('#v-prep').hidden){$$('#pbody .st').forEach(x=>x.parentNode.removeChild(x));markPrep($('#pbody'))}},0);if(window.NSM&&NSM.onClose)NSM.onClose();$('#solve').hidden=true;document.body.style.overflow='';renderCards();const c=document.querySelector(`.card[data-i="${svCur?svCur.id:-1}"]`);if(c)c.focus()}
 function saveMemo(){if(!svCur)return;const r=rec.get(svCur.id);r.memo=$('#svMemo').value;if(!r.memo)delete r.memo;rec.set(svCur.id,r)}
 async function showSolve(){
   saveMemo();const i=svList[svIdx];svCur=i;const o=ORIG[i.id]||{q:[],a:[],src:''};
@@ -1028,12 +1057,13 @@ document.addEventListener('keydown',e=>{if($('#solve').hidden)return;if(e.key===
 let overviewDone=false;
 function route(){
   const h=location.hash.slice(1)||'items';
-  const v=h.startsWith('s-')?'school':h.startsWith('c-')?'concepts':(['items','schools','concepts','graph','scores','overview'].includes(h)?h:'items');
+  const v=h.startsWith('s-')?'school':h.startsWith('c-')?'concepts':h.startsWith('prep')?'prep':(['items','schools','concepts','graph','scores','overview'].includes(h)?h:'items');
   $$('main section').forEach(s=>s.hidden=s.id!=='v-'+v);
   $$('nav.tabs a').forEach(a=>a.removeAttribute('aria-current'));
   $$('nav.tabs a').forEach(a=>{if(a.dataset.v===(v==='school'?'schools':v))a.setAttribute('aria-current','page')});
   if(v==='school')openSchool(h.slice(2));
   if(v==='concepts')openConcept(h.startsWith('c-')?h.slice(2):null);
+  if(v==='prep')openPrep(h.startsWith('prep-')?h.slice(5):null);
   if(v==='graph')buildGraph();
   if(v==='overview'&&!overviewDone){overviewDone=true;renderOverview()}
   if(v!=='items')window.scrollTo({top:0});
