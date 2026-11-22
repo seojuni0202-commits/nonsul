@@ -353,7 +353,7 @@ a.chip{border-color:#bfdbfe;background:#eff6ff;color:#1d4ed8}
 .typed .qitem p{margin:0 0 .35em}
 .typed .qitem>p:first-child>strong:first-child{display:inline-block;min-width:1.6em;text-indent:0}
 .typed .qitem br+mjx-container,.typed p br+mjx-container{margin-left:0}
-.qnone b{display:block;font-size:1.05rem;color:#1f2937;margin-bottom:6px}.qnone p{margin:4px 0}.figimg{max-width:100%;height:auto;display:inline-block;background:#fff}
+.qnone b{display:block;font-size:1.05rem;color:#1f2937;margin-bottom:6px}.qnone p{margin:4px 0}.figimg{max-width:100%;height:auto;display:inline-block;background:transparent;mix-blend-mode:multiply}
 .pv .figimg{max-height:180px;width:auto!important}
 .cnav{position:sticky;top:var(--tabsh,52px);z-index:4;background:#fff;margin:10px calc(-1*clamp(16px,3vw,36px)) 6px;padding:8px clamp(16px,3vw,36px) 8px;border-bottom:1px solid var(--line)}
 .ccats{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
@@ -1228,6 +1228,8 @@ function mdMath(t){
   h=h.replace(/@@M(\d+)@@/g,(_,n)=>{const [x,d]=M[n];const e=x.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');return d?'\\['+e+'\\]':'\\('+e+'\\)'});
   const w=document.createElement('div');w.innerHTML=h;w.querySelectorAll('table').forEach(tb=>{const d=document.createElement('div');d.className='tw';tb.replaceWith(d);d.appendChild(tb)});
   w.querySelectorAll('blockquote').forEach(bq=>{const t=bq.textContent;if(/출제\s?범위|예상\s?소요|출제\s?근거|교육과정|성취\s?기준|논술고사\s?·|전형명/.test(t)&&t.length<400&&!/제시문/.test(t)){bq.classList.add('meta');metaLine(bq)}});
+  // 그림 설명 주석만 남은 빈 인용 상자 지우기
+  w.querySelectorAll('blockquote').forEach(b=>{if(!b.textContent.trim()&&!b.querySelector('img,svg,mjx-container,table'))b.remove()});
   tightenFlow(w);
   // 이어진 제시문·조건 인용들을 한 상자로
   let grp=null;
