@@ -1251,15 +1251,20 @@ function pullIntent(d){
 }
 async function showKeys(keys,box,opt={}){
   box.innerHTML='';if(!keys.length&&!opt.pre)return;
-  const preDiv=()=>{const d=document.createElement('div');d.className='typed';d.innerHTML='<section class="intent"><h3>출제 의도</h3>'+opt.pre+'</section>';return d};
-  const typed=keys.every(k=>TPIDX[k]);
-  if(!typed||showOrig){await pageImgs(keys,box,true);if(opt.pre)box.prepend(preDiv());if(!typed){const n=document.createElement('p');n.className='srcline';n.style.cssText='width:100%;max-width:var(--pw,720px)';n.textContent='이 쪽은 아직 타이핑 전이라 원본 이미지로 보여요.';box.prepend(n)}return}
-  const parts=[];for(const k of keys){const pk=await getTPack(TPIDX[k]);const tx=(pk[k]||'').trim();if(tx)parts.push(tx)}
-  if(parts.length){const d=document.createElement('div');d.className='typed';d.innerHTML=mdMath(parts.join('\n\n'));
-    if(opt.pull)svIntent=pullIntent(d);
-    if(opt.pre)d.insertAdjacentHTML('afterbegin','<section class="intent"><h3>출제 의도</h3>'+opt.pre+'</section>');
-    box.appendChild(d)}
-  else if(opt.pre)box.appendChild(preDiv());
+  const preHTML=()=>'<section class="intent"><h3>출제 의도</h3>'+opt.pre+'</section>';
+  if(showOrig){await pageImgs(keys,box,true);if(opt.pre){const d=document.createElement('div');d.className='typed';d.innerHTML=preHTML();box.prepend(d)}return}
+  // 글 조각(대문항 범위)과 글 없는 원본 쪽 그림이 섞여 있으면 순서대로 이어 보인다
+  const groups=[];for(const k of keys){const t=!!TPIDX[k];const g=groups[groups.length-1];if(g&&g.t===t)g.k.push(k);else groups.push({t,k:[k]})}
+  let first=true;
+  for(const g of groups){
+    if(!g.t){const w=document.createElement('div');w.className='pages';w.style.width='100%';box.appendChild(w);await pageImgs(g.k,w,true);continue}
+    const parts=[];for(const k of g.k){const pk=await getTPack(TPIDX[k]);const tx=(pk[k]||'').trim();if(tx)parts.push(tx)}
+    if(!parts.length)continue;
+    const d=document.createElement('div');d.className='typed';d.innerHTML=mdMath(parts.join('\n\n'));
+    if(first&&opt.pull)svIntent=pullIntent(d);
+    if(first&&opt.pre)d.insertAdjacentHTML('afterbegin',preHTML());
+    first=false;box.appendChild(d)}
+  if(first&&opt.pre){const d=document.createElement('div');d.className='typed';d.innerHTML=preHTML();box.prepend(d)}
   if(window.MathJax&&MathJax.typesetPromise){try{await MathJax.typesetPromise([box])}catch(e){}}
 }
 async function pageImgs(keys,box,keep){
@@ -1332,7 +1337,7 @@ async function showSolve(){
   const none=QNONE[i.id];
   if(none){box.innerHTML=`<div class="noimg qnone"><b>문제 원문 없음</b><p>${esc(none)}</p><p style="color:var(--ink);text-align:left;margin:12px 0 0">문항 요약: ${texInline(i.idea||'')}</p></div>`;typeset(box);
     if(o.a.length){const h=document.createElement('p');h.className='note';h.style.marginTop='12px';h.textContent='해설·채점 자료는 "예시답안 보기"로 볼 수 있어요.';box.appendChild(h)}return}
-  svIntent='';if(o.q.length)await showKeys(o.q,box,{pull:o.a.length>0});
+  svIntent='';const qk=showOrig&&o.oq&&o.oq.length?o.oq:o.q;if(qk.length)await showKeys(qk,box,{pull:o.a.length>0});
   else box.innerHTML=`<div class="noimg">이 문항은 원본 쪽을 찾지 못했어요. 아래 요약으로 문제를 확인하세요.<p style="color:var(--ink);text-align:left;margin:12px 0 0">${esc(i.idea)}</p></div>`;
 }
 $('#svHintBtn').onclick=()=>{const h=$('#svHint');h.hidden=!h.hidden;if(!h.hidden)typeset(h);$('#svHintBtn').textContent=h.hidden?'힌트 보기':'힌트 가리기'};
@@ -1341,7 +1346,7 @@ $('#svAnsBtn').onclick=async()=>{const n=$('#svAnsNote');const o=ORIG[svCur.id];
   if(n.hidden){n.hidden=false;n.textContent='문제 아래에 예시답안 쪽을 붙였어요.';$('#svAnsBtn').textContent='예시답안 가리기';
     const area=document.createElement('div');area.id='ansArea';area.className='pages';area.style.width='100%';
     const sep=document.createElement('div');sep.className='srcline';sep.style.cssText='width:100%;max-width:var(--pw,720px);border-top:2px solid var(--pencil);padding-top:6px;color:var(--pencil);font-weight:600';sep.textContent='예시답안·해설';
-    const wrap=document.createElement('div');wrap.className='pages';wrap.style.width='100%';area.append(sep,wrap);$('#svPages').append(area);await showKeys(o.a,wrap,{pre:svIntent});sep.scrollIntoView({behavior:'smooth'})}
+    const wrap=document.createElement('div');wrap.className='pages';wrap.style.width='100%';area.append(sep,wrap);$('#svPages').append(area);await showKeys(showOrig&&o.oa&&o.oa.length?o.oa:o.a,wrap,{pre:svIntent});sep.scrollIntoView({behavior:'smooth'})}
   else{n.hidden=true;$('#svAnsBtn').textContent='예시답안 보기';if(old)old.remove()}};
 $('#svStatus').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const r=rec.get(svCur.id);if(r.st===b.dataset.st){delete r.st;delete r.t}else{r.st=b.dataset.st;r.t=Date.now()}rec.set(svCur.id,r);STUDY.draw();$$('#svStatus button').forEach(x=>x.setAttribute('aria-pressed',r.st===x.dataset.st))});
 $('#svMemo').addEventListener('input',debounce(saveMemo,400));
@@ -1373,8 +1378,16 @@ function route(){
 window.addEventListener('hashchange',route);
 $$('.seg button').forEach(b=>b.onclick=()=>{TR=b.dataset.tr;store.set('tr',TR);$$('.seg button').forEach(x=>x.setAttribute('aria-pressed',x===b));applyItems();renderSchoolGrid();if(curSchool&&!$('#v-school').hidden){const k=$('#ssub [aria-pressed="true"]')?.dataset.k;if(k==='items')showSchoolTab('items')}});
 
-let ITEMS_V=[];
-Promise.all(['meta.json','items.json','scores.json','hide.json'].map(f=>fetch(f).then(r=>r.json()).catch(()=>({})))).then(async([m,it,sc,hd])=>{
+let ITEMS_V=[],IDMAP={};
+/* 카드를 대문항 단위로 다시 묶으면서 번호가 바뀌었다: 이 기기의 내 기록·메모를 새 번호로 한 번 옮긴다 */
+function migrateRec(){try{if(localStorage.getItem('mig:norm1')||!Object.keys(IDMAP).length)return;
+  const rank={wrong:3,again:2,done:1};const acc={};
+  for(const [o,n] of Object.entries(IDMAP)){const r=JSON.parse(localStorage.getItem('rec:'+o)||'null');if(!r)continue;const a=acc[n]||(acc[n]={});
+    if(r.st&&(!a.st||rank[r.st]>rank[a.st])){a.st=r.st;a.t=r.t}if(r.memo)a.memo=a.memo?a.memo+'\n'+r.memo:r.memo}
+  const old=Object.keys(localStorage).filter(k=>/^rec:\d+$/.test(k));old.forEach(k=>localStorage.removeItem(k));
+  for(const [n,a] of Object.entries(acc))localStorage.setItem('rec:'+n,JSON.stringify(a));
+  localStorage.setItem('mig:norm1','1');window.__inkMig=IDMAP}catch(e){}}
+Promise.all(['meta.json','items.json','scores.json','hide.json','idmap.json'].map(f=>fetch(f).then(r=>r.json()).catch(()=>({})))).then(async([m,it,sc,hd,im])=>{IDMAP=im||{};migrateRec();
   try{SESS=await fetch('sessions.json').then(r=>r.ok?r.json():{})}catch(e){SESS={}}
   try{SESSQ=await fetch('sessq.json').then(r=>r.ok?r.json():{})}catch(e){SESSQ={}}
   META=m;ITEMS=it;SCORES=sc;ITEMS.forEach((i,n)=>{i.id=n;if(hd&&hd[n]!=null)i.dup=1;i.tags=[...new Set(i.tags.map(t=>TAGALIAS[t]||t))]});ITEMS_V=ITEMS.filter(i=>!i.dup);
