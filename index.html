@@ -668,10 +668,10 @@ h2{font-size:1.55rem;margin:0 0 16px;letter-spacing:-.01em}
 <footer><div class="wrap">각 대학의 선행학습 영향평가 보고서(문항카드), 입학처 자료집·입시결과를 바탕으로 정리했어요. “(추정)”이 붙은 부분과 예측은 기출 분석에서 나온 판단이고, 대학의 공식 정답이나 출제 정보가 아니에요. 원본 쪽 이미지는 대학 자료(무단 복제·전재 금지)라 개인 공부용으로만 쓰고 링크를 공유하지 마세요. 문항과 원본 쪽은 자동으로 연결해서 가끔 다른 쪽이 열릴 수 있어요. 정리 기준일 2026-11-21.</div></footer>
 
 <script>window.MathJax={tex:{inlineMath:[["\\(","\\)"]],displayMath:[["\\[","\\]"]]},svg:{fontCache:"global"},startup:{typeset:false}};</script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg-full.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+
 <script>
 (function(){
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -960,6 +960,8 @@ $('#sq').addEventListener('input',()=>{renderSchoolGrid()});
 $('#sq').addEventListener('keydown',e=>{if(e.key==='Enter'){const b=$('#sgrid .sbtn');if(b)b.click()}});
 $('#sgrid').addEventListener('click',e=>{const st=e.target.closest('[data-sstar]');if(st){FAV.toggle('s',st.dataset.sstar);return}const b=e.target.closest('.sbtn');if(b)location.hash='s-'+b.dataset.id});
 let curSchool=null;
+/* 관계 그래프 라이브러리(d3)는 그래프 탭을 열 때만 받는다 */
+let d3P=null;function loadD3(){if(window.d3)return Promise.resolve();if(!d3P)d3P=new Promise((res,rej)=>{const sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js';sc.onload=res;sc.onerror=rej;document.head.appendChild(sc)});return d3P}
 function typeset(el){if(window.MathJax&&MathJax.typesetPromise)MathJax.typesetPromise([el]).catch(()=>{})}
 // 필수 개념 탭
 let CIDX=null;
@@ -1067,7 +1069,7 @@ function openSchool(id){
   $('#sfacts').innerHTML=`<div class="fact"><b>${c.m}</b>수리 문항</div><div class="fact"><b>${c.b}</b>생명 문항</div>`+
    (p?`<div class="fact"><b>${Math.round(p.rare*100)}%</b>드문 논리 비율</div>`:'')+(sims?`<div class="fact" style="max-width:340px"><b style="font-size:.85rem">${esc(sims)}</b>논리 프로필이 비슷한 학교</div>`:'');
   const tabs=[...s.docs.map(d=>({k:'d:'+d.f,l:d.t===s.n||d.t===disp(s.n)?'분석·예측':d.t.replace(disp(s.n),'').replace(/^[ _]+/,'')||d.t})),
-    ...(s.year?[{k:'year',l:'연도별 연결'}]:[]),...(s.rel?[{k:'rel',l:'다른 학교와의 연관'}]:[]),{k:'items',l:'기출 목록'},...(SC_BY[s.n]?[{k:'scores',l:'합격자 점수'}]:[])];
+    ...(s.year?[{k:'year',l:'연도별 연결'}]:[]),...(s.rel?[{k:'rel',l:'다른 학교와의 연관'}]:[]),{k:'items',l:'기출 목록'},...(SC_HAS.has(s.n)?[{k:'scores',l:'합격자 점수'}]:[])];
   tabs.forEach(t=>{if(t.l.startsWith('고려대 생명')||t.l==='생명')t.l='생명'});
   $('#ssub').innerHTML=tabs.map((t,n)=>`<button type="button" data-k="${t.k}" aria-pressed="${n===0}">${esc(t.l)}</button>`).join('');
   showSchoolTab(tabs[0].k);
@@ -1080,7 +1082,7 @@ async function showSchoolTab(k){
     el.innerHTML=`<p class="note" style="margin:0 0 10px">${L.length}문항 · <a href="#i-all" id="toSearch">기출 검색에서 이 학교로 거르기</a></p><div class="cards">${L.map(card).join('')}</div>`;
     $('#toSearch').onclick=()=>{setTimeout(()=>{$('#fs').value=s.n;applyItems()},0)};
     el.querySelector('.cards').addEventListener('click',e=>{const b=e.target.closest('.tag');if(!b){const c=e.target.closest('.card');if(c)openSolve(+c.dataset.i,L);return}location.hash='i-all';setTimeout(()=>{['#q','#fs','#fy','#fk'].forEach(x=>$(x).value='');$('#ft').value=b.dataset.tag;applyItems()},0)});return}
-  if(k==='scores'){const R=SC_BY[s.n];el.innerHTML=`<div class="tbl"><table><thead><tr><th>학년도</th><th>모집단위</th><th>지표</th><th style="text-align:right">값 / 만점</th><th>기타</th></tr></thead><tbody>${R.slice().sort((a,b)=>b[1]-a[1]).map(r=>`<tr><td>${esc(r[1])}</td><td>${esc(r[3])}</td><td>${esc(r[4])}</td>${valCell(r)}<td class="src">${esc(r[7])}</td></tr>`).join('')}</tbody></table></div>`}
+  if(k==='scores'){await ensureScores();const R=SC_BY[s.n]||[];el.innerHTML=`<div class="tbl"><table><thead><tr><th>학년도</th><th>모집단위</th><th>지표</th><th style="text-align:right">값 / 만점</th><th>기타</th></tr></thead><tbody>${R.slice().sort((a,b)=>b[1]-a[1]).map(r=>`<tr><td>${esc(r[1])}</td><td>${esc(r[3])}</td><td>${esc(r[4])}</td>${valCell(r)}<td class="src">${esc(r[7])}</td></tr>`).join('')}</tbody></table></div>`}
 }
 
 /* ---------- graph ---------- */
@@ -1132,11 +1134,14 @@ function showSide(n){
 }
 
 /* ---------- scores ---------- */
-let PUB=new Set(),SC_BY={},sShown=100,sFilt=[];
+let PUB=new Set(),SC_BY={},SC_HAS=new Set(),SCIDX={},scP=null,sShown=100,sFilt=[];
+/* 합격자 점수(1.5MB)는 그 화면을 열 때만 받는다 */
+function ensureScores(){if(!scP)scP=fetch('scores.json').then(r=>r.json()).then(sc=>{SCORES=sc;SC_BY={};sc.forEach(r=>(SC_BY[r[0]]=SC_BY[r[0]]||[]).push(r))}).catch(()=>{});return scP}
 const MED=/의예|의학|의과|약학|약대|치의|한의|수의|의대/;
 function valCell(r){const v=parseFloat(r[5]),m=parseFloat(r[6]);const pct=v&&m?Math.min(100,100*v/m):null;
   return `<td class="num">${esc(r[5])}${r[6]?' / '+esc(r[6]):''}${pct!==null?`<span class="meter" aria-hidden="true"><i style="width:${pct}%"></i></span>`:''}</td>`}
 function applyScores(){
+  if(!SCORES.length){if(!$('#v-scores').hidden)ensureScores().then(()=>{if(SCORES.length)applyScores()});return}
   const s=$('#ss').value,y=$('#sy').value,q=$('#scq').value.trim().toLowerCase().split(/\s+/).filter(Boolean),med=$('#smed').checked;
   sFilt=SCORES.filter(r=>(!s||r[0]===s)&&(!y||r[1]===y)&&(!med||MED.test(r[3]))&&(!q.length||q.every(w=>(r[3]+' '+r[4]+' '+r[2]).toLowerCase().includes(w))));
   sShown=100;$('#scnt').textContent=sFilt.length.toLocaleString();renderScores();
@@ -1289,11 +1294,12 @@ window.addEventListener('popstate',e=>{const st=e.state||{};if(!st.solve&&!$('#s
 /* 추가 학습: 문항별 필수 개념·논리 라벨 + 인지과학 근거의 공부 재료(인출·자기설명·오류 점검·섞어 풀기·간격 복습) */
 const STUDY=(()=>{
   let L=null,R=null,cur=null,tab=(()=>{try{return localStorage.getItem('stab')||'know'}catch(e){return 'know'}})();
-  const load=async()=>{if(!L){[L,R]=await Promise.all([fetch('study.json').then(r=>r.json()).catch(()=>({})),fetch('routine.json').then(r=>r.json()).catch(()=>null)]);await loadCIdx()}};
+  const DET={};const det=id=>{const c=Math.floor(id/200);if(!DET[c])DET[c]=fetch('study/s'+String(c).padStart(3,'0')+'.json').then(r=>r.json()).catch(()=>({}));return DET[c]};let DD={};
+  let LP=null;const load=()=>LP||(LP=(async()=>{[L,R]=await Promise.all([fetch('study/idx.json').then(r=>r.json()).catch(()=>({})),fetch('routine.json').then(r=>r.json()).catch(()=>null)]);await loadCIdx()})());
   const cName=id=>{const c=(CIDX||[]).find(x=>x.id===id);return c?c.t:id};
   // 라벨이 없는 문항: 태그로 개념 추정
   const guessC=i=>{const sc=[];for(const c of CIDX||[]){const n=c.tags.filter(t=>i.tags.includes(t)).length;if(n)sc.push([n,c.id])}return sc.sort((a,b)=>b[0]-a[0]).slice(0,3).map(x=>x[1])};
-  const lab=i=>{const x=L&&L[i.id];if(x&&!x.skip)return x;if(x&&x.skip)return {skip:1};return {c:guessC(i),t:i.tags.slice(0,3),guess:1}};
+  const lab=i=>{const x=L&&(DD[i.id]||L[i.id]);if(x&&!x.skip)return x;if(x&&x.skip)return {skip:1};return {c:guessC(i),t:i.tags.slice(0,3),guess:1}};
   const DAY=864e5;
   function plan(r){if(!r.st||!r.t)return null;const rv=(R&&R.review)||{wrong:[1,3,7,21],again:[2,7,21],done:[14,45]};
     const left=(new Date('2026-11-29')-Date.now())/DAY;const g=(left<30&&rv.short&&rv.short[r.st])||rv[r.st]||[];
@@ -1320,7 +1326,7 @@ const STUDY=(()=>{
     const p=plan(r);const nm={done:'풀었음',again:'다시 볼 것',wrong:'틀림'};
     h+=`<div class="rev">${p?`<b>다음 복습 ${p.nx?fmtD(p.nx):'완료'}</b> · ${nm[r.st]} 기준 ${p.ds.map(fmtD).join(' → ')}`:'내 기록을 남기면 복습 날짜가 떠요.'}</div>`;
     return h}
-  async function draw(){if(!cur)return;const el=$('#svStudyBody');await load();if(!cur)return;
+  async function draw(){if(!cur)return;const el=$('#svStudyBody');await load();if(!cur)return;Object.assign(DD,await det(cur.id));if(!cur)return;
     $$('#svStudy [data-stab]').forEach(b=>b.setAttribute('aria-selected',b.dataset.stab===tab));el.innerHTML=body(cur);typeset(el)}
   $('#svStudy .stabs').addEventListener('click',e=>{const b=e.target.closest('[data-stab]');if(!b)return;tab=b.dataset.stab;try{localStorage.setItem('stab',tab)}catch(e){}draw()});
   return {open(i){cur=i;draw()},draw,lab:i=>L?lab(i):null};
@@ -1378,7 +1384,8 @@ function route(){
   if(v==='school')openSchool(h.slice(2));
   if(v==='concepts')openConcept(h.startsWith('c-')?h.slice(2):null);
   if(v==='prep')openPrep(h.startsWith('prep-')?h.slice(5):null);
-  if(v==='graph')buildGraph();
+  if(v==='scores')applyScores();
+  if(v==='graph')loadD3().then(buildGraph);
   if(v==='overview'&&!overviewDone){overviewDone=true;renderOverview()}
   if(v!=='items')window.scrollTo({top:0});
 }
@@ -1394,17 +1401,17 @@ function migrateRec(){try{if(localStorage.getItem('mig:norm1')||!Object.keys(IDM
   const old=Object.keys(localStorage).filter(k=>/^rec:\d+$/.test(k));old.forEach(k=>localStorage.removeItem(k));
   for(const [n,a] of Object.entries(acc))localStorage.setItem('rec:'+n,JSON.stringify(a));
   localStorage.setItem('mig:norm1','1');window.__inkMig=IDMAP}catch(e){}}
-Promise.all(['meta.json','items.json','scores.json','hide.json','idmap.json'].map(f=>fetch(f).then(r=>r.json()).catch(()=>({})))).then(async([m,it,sc,hd,im])=>{IDMAP=im||{};migrateRec();
+Promise.all(['meta.json','items.json','scores_idx.json','hide.json','idmap.json'].map(f=>fetch(f).then(r=>r.json()).catch(()=>({})))).then(async([m,it,sc,hd,im])=>{IDMAP=im||{};migrateRec();
   try{SESS=await fetch('sessions.json').then(r=>r.ok?r.json():{})}catch(e){SESS={}}
   try{SESSQ=await fetch('sessq.json').then(r=>r.ok?r.json():{})}catch(e){SESSQ={}}
-  META=m;ITEMS=it;SCORES=sc;ITEMS.forEach((i,n)=>{i.id=n;if(hd&&hd[n]!=null)i.dup=1;i.tags=[...new Set(i.tags.map(t=>TAGALIAS[t]||t))]});ITEMS_V=ITEMS.filter(i=>!i.dup);
+  META=m;ITEMS=it;SCIDX=sc||{};SCORES=[];ITEMS.forEach((i,n)=>{i.id=n;if(hd&&hd[n]!=null)i.dup=1;i.tags=[...new Set(i.tags.map(t=>TAGALIAS[t]||t))]});ITEMS_V=ITEMS.filter(i=>!i.dup);
   try{const o=await fetch('orig.json').then(r=>r.json());ORIG=o.items;PIDX=o.pages;TPIDX=o.tpages||{}}catch(e){}
   try{QNONE=await fetch('qnone.json').then(r=>r.ok?r.json():{})}catch(e){QNONE={}}
   if(store.get('hideHints')){$('#fh').checked=true;document.body.classList.add('hide-hints')}
   const df={};ITEMS.forEach(i=>i.tags.forEach(t=>df[t]=(df[t]||0)+1));
   META.rareSet=new Set(Object.keys(df).filter(t=>df[t]<30));
   ITEMS.forEach(i=>i._t=(i.s+' '+i.y+' '+i.k+' '+i.q+' '+i.u+' '+i.idea+' '+i.key+' '+i.subj+' '+i.g+' '+gDisp(i)+' '+gTip(i)+' '+i.tags.join(' ')+' '+i.tags.map(tagName).join(' ')).toLowerCase());
-  SCORES.forEach(r=>{(SC_BY[r[0]]=SC_BY[r[0]]||[]).push(r);if(/\d/.test(r[5]))PUB.add(r[0])});
+  PUB=new Set(SCIDX.pub||[]);SC_HAS=new Set(SCIDX.has||[]);
   fillSel('#fs',META.schools.map(s=>s.n),disp);
   fillSel('#fy',[...new Set(ITEMS.map(i=>i.y))].filter(Boolean).sort().reverse());
   {const gn={};ITEMS.forEach(i=>{i._g=gcats(i);for(const c of i._g)gn[c]=(gn[c]||0)+1});fillSel('#fg',['M','P','N'],c=>GCAT[c]+' ('+(gn[c]||0).toLocaleString()+')')}
@@ -1415,7 +1422,7 @@ Promise.all(['meta.json','items.json','scores.json','hide.json','idmap.json'].ma
    renderTagGuide(df);$('#tgQ').addEventListener('input',()=>renderTagGuide(df));
    $('#tgList').addEventListener('click',e=>{const st=e.target.closest('[data-tstar]');if(st){FAV.toggle('t',st.dataset.tstar);renderTagGuide(df);return}const b=e.target.closest('button[data-tag]');if(!b)return;['#q','#fs','#fy','#fk'].forEach(x=>$(x).value='');$('#ft').value=b.dataset.tag;applyItems();if(!location.hash.startsWith('#i-'))location.hash='i-all';$('#tagGuide').open=false;$('#cnt').scrollIntoView({block:'start',behavior:'smooth'})})}
   fillSel('#ss',[...PUB].sort(),disp);
-  fillSel('#sy',[...new Set(SCORES.map(r=>r[1]))].sort().reverse());
+  fillSel('#sy',SCIDX.years||[]);
   const saved=store.get('tr');if(saved&&saved!=='all'){const b=$(`.seg button[data-tr="${saved}"]`);if(b){TR=saved;$$('.seg button').forEach(x=>x.setAttribute('aria-pressed',x===b))}}
   $('#stats').innerHTML=`<div><b>${META.schools.length}</b>학교</div><div><b>${ITEMS.length.toLocaleString()}</b>문항</div><div><b>${PUB.size}</b>점수 공개 학교</div>`;
   ['#fs','#fk','#fg','#ft','#fy','#fm'].forEach(x=>enhanceSelect($(x)));
