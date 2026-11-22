@@ -297,9 +297,12 @@ body{word-break:keep-all;overflow-wrap:break-word}
 .doclay .toc-i:hover{background:var(--paper)}
 .doclay .toc-i.on{color:var(--blue);font-weight:600;border-left-color:var(--blue);background:var(--blue-soft)}
 .doclay .toc-i:focus-visible{outline:2px solid var(--blue)}
+.doclay .toc-i.sub{padding-left:22px;font-size:.82rem;color:var(--muted)}
+.doclay .toc-i.sub.on{color:var(--blue)}
+.doclay .docbody>h3{scroll-margin-top:72px}
 .doclay .docbody>h2{scroll-margin-top:72px;margin-top:2em;padding-top:1em;border-top:1px solid var(--line)}
 .doclay .docbody>h2:first-of-type{margin-top:0;padding-top:0;border-top:0}
-@media (max-width:860px){.doclay{grid-template-columns:1fr;gap:12px}.doclay .toc{position:sticky;top:44px;z-index:3;background:#fff;display:flex;gap:6px;overflow-x:auto;max-height:none;border-right:0;border-bottom:1px solid var(--line);padding:8px 0}.doclay .toc-t{display:none}.doclay .toc-i{white-space:nowrap;border-left:0;border-bottom:2px solid transparent;border-radius:0;padding:6px 8px}.doclay .toc-i.on{border-bottom-color:var(--blue);background:none}}
+@media (max-width:860px){.doclay .toc-i.sub{display:none}.doclay{grid-template-columns:1fr;gap:12px}.doclay .toc{position:sticky;top:44px;z-index:3;background:#fff;display:flex;gap:6px;overflow-x:auto;max-height:none;border-right:0;border-bottom:1px solid var(--line);padding:8px 0}.doclay .toc-t{display:none}.doclay .toc-i{white-space:nowrap;border-left:0;border-bottom:2px solid transparent;border-radius:0;padding:6px 8px}.doclay .toc-i.on{border-bottom-color:var(--blue);background:none}}
 .card .hd .sess{color:#374151;font-weight:500}.card .hd .sess sup{font-size:.62rem;color:var(--muted);margin-left:2px}
 /* 필수 개념 탭 */
 .clay{display:grid;grid-template-columns:250px minmax(0,1fr);gap:32px;align-items:start}
@@ -372,6 +375,25 @@ h2{font-size:1.55rem;margin:0 0 16px;letter-spacing:-.01em}
 .tag.rare{background:var(--pencil-soft);border-color:transparent;color:var(--pencil)}
 .tag:hover{border-color:var(--blue);color:var(--blue)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* 눈 피로를 줄이는 수식·문단 리듬 (마지막에 두어 앞 규칙을 덮음)
+   - 본문 속 수식이 줄 높이를 밀어내지 않게: 인라인 수식은 줄 상자 계산에서 빼고(line-height 0), 줄 간격을 넉넉히 고정
+   - 따로 선 수식은 위아래 같은 간격, 문단 간격과 같은 단위(em)로
+   - 글자색은 순검정 대신 짙은 회색, 한 줄 길이 제한 */
+.typed,.doc,.cdoc{color:#1f2937}
+.typed{line-height:2;font-size:1.05rem}
+.typed p,.typed li,.doc p,.doc li,.cdoc p,.cdoc li{line-height:2}
+.typed mjx-container:not([display="true"]),.doc mjx-container:not([display="true"]),.cdoc mjx-container:not([display="true"]),.card mjx-container:not([display="true"]){line-height:0;vertical-align:middle;margin:0 .12em}
+.typed mjx-container[display="true"],.doc mjx-container[display="true"],.cdoc mjx-container[display="true"]{display:block;margin:1em 0 1em!important;padding:.1em 0;overflow-x:auto;overflow-y:hidden}
+.typed p{margin:0 0 1em}
+.typed p+mjx-container[display="true"],.typed mjx-container[display="true"]+p{margin-top:.6em!important}
+.typed .psg{line-height:2}
+.typed .psg>blockquote p{margin:0 0 .8em}
+.typed table,.doc table{line-height:1.7}
+.typed table mjx-container:not([display="true"]),.doc table mjx-container:not([display="true"]){line-height:normal}
+.card p,.card .key{line-height:1.75}
+.card .pv .pvdoc{line-height:1.8}
+.doc p,.doc li{max-width:42em}
 </style>
 
 <header class="top"><div class="wrap">
@@ -544,7 +566,7 @@ function md(t,opt={}){const MM=[];t=t.replace(/\$\$([\s\S]+?)\$\$/g,(_,x)=>{MM.p
   const nav=document.createElement('nav');nav.className='toc';nav.setAttribute('aria-label','목차');
   const navT=document.createElement('div');navT.className='toc-t';navT.textContent='목차';nav.appendChild(navT);
   const body=document.createElement('div');body.className='docbody';
-  for(const n of kids){if(n.tagName==='H2'){const sid=id();n.id=sid;const b=document.createElement('button');b.type='button';b.className='toc-i';b.dataset.target=sid;b.textContent=n.textContent;nav.appendChild(b)}body.appendChild(n)}
+  for(const n of kids){if(n.tagName==='H2'||n.tagName==='H3'){const sid=id();n.id=sid;const b=document.createElement('button');b.type='button';b.className='toc-i'+(n.tagName==='H3'?' sub':'');b.dataset.target=sid;b.textContent=n.textContent.replace(/\s*\(먼저 읽기\)/,'');nav.appendChild(b)}body.appendChild(n)}
   lay.append(nav,body);return lay.outerHTML}
 let tocLock=0;document.addEventListener('click',e=>{const b=e.target.closest('.toc-i');if(!b)return;const t=document.getElementById(b.dataset.target);if(!t)return;tocLock=Date.now();b.parentElement.querySelectorAll('.toc-i').forEach(x=>x.classList.toggle('on',x===b));const narrow=innerWidth<=860;const y=t.getBoundingClientRect().top+scrollY-(document.querySelector('nav.tabs')?.offsetHeight||0)-(narrow?b.parentElement.offsetHeight:0)-12;if(narrow){const nv=b.parentElement;nv.scrollLeft=b.offsetLeft-nv.clientWidth/2+b.clientWidth/2;nv.dataset.act=b.dataset.target}window.scrollTo({top:y,behavior:'smooth'})});
 window.addEventListener('scroll',()=>{if(Date.now()-tocLock<1200)return;const navs=document.querySelectorAll('.doclay .toc');navs.forEach(nav=>{if(!nav.offsetParent)return;const off=(document.querySelector('nav.tabs')?.offsetHeight||0)+(innerWidth<=860?nav.offsetHeight:0)+Math.min(260,innerHeight*0.3);let cur=null;nav.querySelectorAll('.toc-i').forEach(b=>{const t=document.getElementById(b.dataset.target);if(t&&t.getBoundingClientRect().top-off<=0)cur=b});const act=cur||nav.querySelector('.toc-i');nav.querySelectorAll('.toc-i').forEach(b=>b.classList.toggle('on',b===act));if(innerWidth<=860&&act&&nav.dataset.act!==act.dataset.target){nav.dataset.act=act.dataset.target;nav.scrollTo({left:act.offsetLeft-nav.clientWidth/2+act.clientWidth/2,behavior:'smooth'})}})},{passive:true});
@@ -605,9 +627,12 @@ function drawHist(){
     if(y===y0||y===y1||(y%5===0&&y-y0>2&&y1-y>2))h+=`<text x="${x+bw/2}" y="${H-1}" text-anchor="middle">${y}</text>`}
   svg.innerHTML=h;
 }
+// 짧은 글 속 $…$ 수식을 MathJax로(나머지는 글자 그대로)
+function texInline(t){return String(t||'').split(/(\$[^$\n]+\$)/g).map((x,k)=>k%2?'\\('+esc(examTeX(x.slice(1,-1)))+'\\)':esc(x)).join('')}
+const cardObs=('IntersectionObserver' in window)?new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){cardObs.unobserve(e.target);if(/\\\(/.test(e.target.innerHTML))typeset(e.target)}}),{rootMargin:'300px'}):null;
 // 카드 미리보기: 문제 화면(제시문 상자·수식)을 작게 미리 보여 줌
 const pvObs=('IntersectionObserver' in window)?new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){pvObs.unobserve(e.target);fillPv(e.target)}}),{rootMargin:'300px'}):null;
-new MutationObserver(ms=>{for(const m of ms)for(const n of m.addedNodes){if(n.nodeType!==1)continue;(n.matches&&n.matches('.pv[data-pv]')?[n]:[...n.querySelectorAll('.pv[data-pv]')]).forEach(el=>pvObs?pvObs.observe(el):fillPv(el))}}).observe(document.body,{childList:true,subtree:true});
+new MutationObserver(ms=>{for(const m of ms)for(const n of m.addedNodes){if(n.nodeType!==1)continue;(n.matches&&n.matches('.pv[data-pv]')?[n]:[...n.querySelectorAll('.pv[data-pv]')]).forEach(el=>pvObs?pvObs.observe(el):fillPv(el));if(cardObs)(n.matches&&n.matches('.card')?[n]:[...n.querySelectorAll('.card')]).forEach(el=>cardObs.observe(el))}}).observe(document.body,{childList:true,subtree:true});
 // 미리보기에는 제시문과 문제만: 머리 정보·출제 의도·해설·채점 이후는 잘라낸다
 function pvTrim(d){
   const isMath=t=>/\\\(|\\\[/.test(t);
@@ -688,7 +713,7 @@ function card(i){
   const tags=i.tags.map(t=>`<button type="button" class="tag${META.rareSet.has(t)?' rare':''}" data-tag="${esc(t)}" title="${esc(tagDesc(t)||'이 논리를 쓴 문항 보기')}">${esc(tagName(t))}</button>`).join('');
   const st=rec.get(i.id).st,o=ORIG[i.id];
   return `<article class="card" tabindex="0" data-i="${i.id}"><div class="hd"><b>${esc(disp(i.s))}</b><span>${esc(i.y)}</span><span class="pill${i.k!=='본'?' mock':''}">${esc(kDisp(i))}</span>${trPill(i)}<span class="sess" title="${esc(gTip(i))}">${esc(gDisp(i))}${sess(i)&&sess(i).e?'<sup>추정</sup>':''}</span><span>${esc(i.q)}</span></div>
-  ${i.u?`<div class="unit">${esc(i.u)}</div>`:''}<div class="pv" data-pv="${i.id}"><p>${esc(i.idea)}</p></div>${i.key?`<div class="key">${esc(i.key)}</div>`:''}<div class="tags">${tags}</div><div class="open">${o&&o.q.length?'문제 열기 →':'요약만 있음 · 열기 →'}${st?`<span class="st ${st}">${ST_LAB[st]}</span>`:''}</div></article>`;
+  ${i.u?`<div class="unit">${esc(i.u)}</div>`:''}<div class="pv" data-pv="${i.id}"><p>${texInline(i.idea)}</p></div>${i.key?`<div class="key">${texInline(i.key)}</div>`:''}<div class="tags">${tags}</div><div class="open">${o&&o.q.length?'문제 열기 →':'요약만 있음 · 열기 →'}${st?`<span class="st ${st}">${ST_LAB[st]}</span>`:''}</div></article>`;
 }
 const yr=i=>parseInt(i.y)||0;
 const GORD={kind:KCATS,line:['의대','약대','자연']};
@@ -965,7 +990,7 @@ async function showSolve(){
   $('#svPrev').disabled=svIdx<=0;$('#svNext').disabled=svIdx>=svList.length-1;
   const r=rec.get(i.id);$$('#svStatus button').forEach(b=>b.setAttribute('aria-pressed',r.st===b.dataset.st));$('#svMemo').value=r.memo||'';
   $('#svHint').hidden=true;$('#svHintBtn').textContent='힌트 보기';
-  $('#svHint').innerHTML=`${i.u?`<p class="srcline">단원: ${esc(i.u)}</p>`:''}<p style="margin:6px 0">${esc(i.idea)}</p>${i.key?`<div style="font-size:.86rem;border-left:3px solid var(--pencil);padding-left:8px">${esc(i.key)}</div>`:''}<div class="tags" style="margin-top:8px">${i.tags.map(t=>`<span class="tag" title="${esc(tagDesc(t))}">${esc(tagName(t))}</span>`).join('')}</div>`;
+  $('#svHint').innerHTML=`${i.u?`<p class="srcline">단원: ${esc(i.u)}</p>`:''}<p style="margin:6px 0">${texInline(i.idea)}</p>${i.key?`<div style="font-size:.86rem;border-left:3px solid var(--pencil);padding-left:8px">${texInline(i.key)}</div>`:''}<div class="tags" style="margin-top:8px">${i.tags.map(t=>`<span class="tag" title="${esc(tagDesc(t))}">${esc(tagName(t))}</span>`).join('')}</div>`;
   $('#svAnsNote').hidden=true;$('#svAnsBtn').disabled=!o.a.length;$('#svAnsBtn').textContent=o.a.length?'예시답안 보기':'연결된 예시답안 쪽 없음';
   $('#svSrc').textContent='';
   $('#solve .body').scrollTop=0;
@@ -975,7 +1000,7 @@ async function showSolve(){
   svIntent='';if(o.q.length)await showKeys(o.q,box,{pull:o.a.length>0});
   else box.innerHTML=`<div class="noimg">이 문항은 원본 쪽을 찾지 못했어요. 아래 요약으로 문제를 확인하세요.<p style="color:var(--ink);text-align:left;margin:12px 0 0">${esc(i.idea)}</p></div>`;
 }
-$('#svHintBtn').onclick=()=>{const h=$('#svHint');h.hidden=!h.hidden;$('#svHintBtn').textContent=h.hidden?'힌트 보기':'힌트 가리기'};
+$('#svHintBtn').onclick=()=>{const h=$('#svHint');h.hidden=!h.hidden;if(!h.hidden)typeset(h);$('#svHintBtn').textContent=h.hidden?'힌트 보기':'힌트 가리기'};
 $('#svAnsBtn').onclick=async()=>{const n=$('#svAnsNote');const o=ORIG[svCur.id];if(!o)return;
   const old=document.getElementById('ansArea');
   if(n.hidden){n.hidden=false;n.textContent='문제 아래에 예시답안 쪽을 붙였어요.';$('#svAnsBtn').textContent='예시답안 가리기';
