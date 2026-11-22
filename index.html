@@ -472,7 +472,7 @@ function getPack(c){if(!packs[c])packs[c]=fetch('img/'+c+'.json').then(r=>r.ok?r
 const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
 const docCache={};
 async function getDoc(f){if(!docCache[f]){const r=await fetch('docs/'+f+'.md');docCache[f]=r.ok?await r.text():'문서를 불러오지 못했어요.'}return docCache[f]}
-function md(t){const h=DOMPurify.sanitize(marked.parse(t));const d=document.createElement('div');d.innerHTML=h;d.querySelectorAll('table').forEach(tb=>{const w=document.createElement('div');w.className='tw';tb.replaceWith(w);w.appendChild(tb)});
+function md(t){t=t.replace(/(^|[^~])~(?!~)/g,'$1\\~');t=t.replace(/\*\*(?=\S)([^*\n]*?\S)\*\*/g,'<strong>$1</strong>');const h=DOMPurify.sanitize(marked.parse(t));const d=document.createElement('div');d.innerHTML=h;d.querySelectorAll('table').forEach(tb=>{const w=document.createElement('div');w.className='tw';tb.replaceWith(w);w.appendChild(tb)});
   const kids=[...d.childNodes];if(kids.filter(n=>n.tagName==='H2').length<2)return d.innerHTML;
   const out=document.createElement('div');let cur=null,first=true;
   for(const n of kids){if(n.tagName==='H2'){cur=document.createElement('details');cur.className='sec';if(first){cur.open=true;first=false}const sm=document.createElement('summary');const tt=document.createElement('span');tt.textContent=n.textContent;sm.appendChild(tt);cur.appendChild(sm);out.appendChild(cur);continue}
@@ -690,6 +690,7 @@ function metaLine(bq){
 function mdMath(t){
   const M=[];const put=(tex,disp)=>{M.push([tex,disp]);return '@@M'+(M.length-1)+'@@'};
   t=t.replace(/\$\$([\s\S]+?)\$\$/g,(_,x)=>put(x.replace(/\n>\s?/g,'\n'),true)).replace(/\$([^\$\n]+?)\$/g,(_,x)=>put(x,false));
+  t=t.replace(/(^|[^~])~(?!~)/g,'$1\\~');
   let h=DOMPurify.sanitize(marked.parse(t));
   h=h.replace(/@@M(\d+)@@/g,(_,n)=>{const [x,d]=M[n];const e=x.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');return d?'\\['+e+'\\]':'\\('+e+'\\)'});
   const w=document.createElement('div');w.innerHTML=h;w.querySelectorAll('table').forEach(tb=>{const d=document.createElement('div');d.className='tw';tb.replaceWith(d);d.appendChild(tb)});
