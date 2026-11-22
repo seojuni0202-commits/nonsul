@@ -89,6 +89,7 @@ nav.tabs a:focus-visible,button:focus-visible,select:focus-visible,input:focus-v
 .seg button[aria-pressed="true"]{background:var(--blue);color:#fff}
 main .wrap{padding-block:20px 48px}
 section[hidden]{display:none}
+[hidden]{display:none!important}
 h2{font-family:var(--f-display);font-size:1.35rem;margin:0 0 4px}
 .lede{color:var(--muted);margin:0 0 16px;max-width:70ch}
 .filters{display:flex;flex-wrap:wrap;gap:10px;align-items:end;background:var(--sheet);border:1px solid var(--line);border-radius:8px;padding:12px}
@@ -126,6 +127,10 @@ h2{font-family:var(--f-display);font-size:1.35rem;margin:0 0 4px}
 .pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px}
 .pcard{text-align:left;background:var(--sheet);border:1px solid var(--line);border-radius:10px;padding:14px 16px;cursor:pointer;font:inherit;color:var(--ink);display:flex;flex-direction:column;gap:8px;min-height:44px}
 .pcard:hover{border-color:var(--blue)}
+.swrap .pcard{width:100%;height:100%}.swrap .pcard .nm{padding-right:34px}
+.pcard.iall{background:var(--blue-soft);border-color:#c7d5f5}
+.sgstar{min-width:36px;min-height:36px;display:inline-flex;align-items:center;justify-content:center;top:6px;right:6px;cursor:pointer}
+.iback{margin:0 0 12px;display:flex;align-items:center;gap:12px}.iback strong{font-size:1.15rem}
 .pcard .nm{font-weight:700;font-size:1.05rem}
 .pcard .psum{font-size:.88rem;line-height:1.6;color:#374151;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
 .pcard .ptier{font-size:.82rem;color:#4b5563}
@@ -445,6 +450,12 @@ h2{font-size:1.55rem;margin:0 0 16px;letter-spacing:-.01em}
 
 <section id="v-items">
   <h2>기출 검색</h2>
+  <div id="ihome">
+    <div class="ssearch"><input type="search" id="iq" placeholder="학교 이름으로 찾기 (예: 한양, 성대, 카대) · 다른 낱말은 전체 기출에서 찾아요" aria-label="학교 검색" autocomplete="off"><span id="icount"></span></div>
+    <div class="pgrid" id="igrid"></div>
+  </div>
+  <div id="ilist" hidden>
+  <p class="iback"><button type="button" class="btn" id="ibackBtn">← 학교 목록</button> <strong id="ititle"></strong></p>
   <div class="filters">
     <label class="grow">검색어<input type="search" id="q" placeholder="예: 성대 의대 2026, 부분적분"></label>
     <label>학교<select id="fs"><option value="">전체 학교</option></select></label>
@@ -466,6 +477,7 @@ h2{font-size:1.55rem;margin:0 0 16px;letter-spacing:-.01em}
   <div class="summary"><span><strong id="cnt">0</strong>문항</span><span class="cfchip" id="cfChip" hidden>개념: <b></b> <button type="button" class="btn" id="cfClear">해제</button></span><svg class="hist" id="hist" viewBox="0 0 520 64" role="img" aria-label="학년도별 문항 수"></svg><label class="sortby">보기<select id="fsort"><option value="school">학교별</option><option value="new">최신순</option><option value="old">오래된순</option><option value="logic">풀이 논리별</option><option value="kind">구분별</option><option value="line">계열별</option><option value="favs">★ 즐겨찾기 학교</option><option value="favt">★ 즐겨찾기 논리</option></select></label></div>
   <div class="cards" id="cards"></div>
   <div class="more"><button class="btn" type="button" id="moreBtn" hidden>더 보기</button></div>
+  </div>
 </section>
 
 <section id="v-schools" hidden>
@@ -647,6 +659,28 @@ const SAL={'성대':['성균관'],'성균':['성균관'],'고대':['고려'],'�
 function sAlts(w){w=w.toLowerCase();const a=SAL[w]||[];const out=[w,...a];if(/대$/.test(w)&&w.length>=3)out.push(w.slice(0,-1));return out}
 function sHit(hay,w){return sAlts(w).some(x=>hay.includes(x))}
 function itemHit(i,w){if(sHit(i._t,w))return true;if(w==='의대'||w==='의예'||w==='메디컬')return i._g.includes('M');if(w==='약대'||w==='약학')return i._g.includes('P');const x=sess(i);return !!(x&&sHit(x.l.toLowerCase(),w))}
+/* 기출 검색 첫 화면: 학교 카드(즐겨찾기 먼저) → 누르면 그 학교 문항 */
+function renderItemsHome(){
+  if(!META||!ITEMS.length)return;const grid=$('#igrid');const q=$('#iq').value.trim().replace(/\s+/g,'').toLowerCase();
+  const by={};ITEMS.forEach(i=>{if(!trOK(i))return;const o=by[i.s]||(by[i.s]={n:0,m:0,b:0,done:0,y0:9999,y1:0,med:false});o.n++;if(i.tr.startsWith('수리'))o.m++;else if(i.tr.includes('생명'))o.b++;const y=parseInt(i.y)||0;if(y){o.y0=Math.min(o.y0,y);o.y1=Math.max(o.y1,y)}if(/M|P/.test(i._g||''))o.med=true;if(rec.get(i.id).st==='done')o.done++});
+  let list=META.schools.filter(x=>by[x.n]).map(x=>({...x,c:by[x.n]}));
+  if(q)list=list.filter(x=>{const hay=(x.n+disp(x.n)).replace(/\s+/g,'').toLowerCase();return sHit(hay,q)||((q==='의대'||q==='약대'||q==='메디컬')&&x.c.med)});
+  list.sort((a,b)=>(FAV.has('s',b.n)-FAV.has('s',a.n))||(b.c.n-a.c.n));
+  $('#icount').textContent=q?list.length+'개 학교':'';
+  const total=ITEMS.filter(trOK).length;
+  const all=`<div class="swrap"><button type="button" class="pcard iall" data-i="all"><span class="nm">전체 기출에서 찾기</span><span class="psum">${q&&!list.length?`"${esc($('#iq').value.trim())}"(으)로 모든 학교 기출을 검색해요.`:'학교를 가리지 않고 풀이 논리·단원·낱말로 찾아요.'}</span><span class="ptier">${total.toLocaleString()}문항 · ${Object.keys(by).length}개 학교</span></button></div>`;
+  grid.innerHTML=all+list.map(x=>{const c=x.c,fv=FAV.has('s',x.n),pct=c.n?Math.round(c.done/c.n*100):0;
+    return `<div class="swrap"><span class="star sgstar${fv?' on':''}" data-istar="${esc(x.n)}" role="button" tabindex="0" aria-label="${fv?'즐겨찾기 해제':'즐겨찾기'}">${fv?'★':'☆'}</span><button type="button" class="pcard" data-i="${x.id}"><span class="nm">${esc(disp(x.n))}</span>
+      <span class="ptier">수리 ${c.m} · 생명 ${c.b}${c.med?' · 의대·약대 시험 있음':''}</span><span class="ptier">${c.y0===c.y1?c.y0:c.y0+'~'+c.y1}학년도 · ${c.n}문항</span>
+      <span class="bar2"><i style="width:${pct}%;background:var(--blue)"></i></span><span class="pprog">풀었음 ${c.done}/${c.n}</span></button></div>`}).join('');
+}
+function showItems(arg){
+  const home=!arg;$('#ihome').hidden=!home;$('#ilist').hidden=home;
+  if(home){renderItemsHome();return}
+  if(arg!=='all'){const sc=META&&META.schools.find(x=>x.id===arg);if(sc&&$('#fs').value!==sc.n){$('#fs').value=sc.n;applyItems()}}
+  itemsTitle();
+}
+function itemsTitle(){const v=$('#fs').value;$('#ititle').textContent=v?disp(v):'전체 기출'}
 function applyItems(){
   const gc=$('#fg').value, q=$('#q').value.trim().toLowerCase(), s=$('#fs').value, y=$('#fy').value, k=$('#fk').value, t=$('#ft').value, r=$('#fr').checked, fm=$('#fm').value, fo=$('#fo').checked;
   const terms=q.split(/\s+/).filter(Boolean);
@@ -654,7 +688,7 @@ function applyItems(){
     (!terms.length||terms.every(w=>itemHit(i,w))));
   if(CONCEPT_FILTER){const T=CONCEPT_FILTER.tags;filtered=filtered.filter(i=>i.tags.some(x=>T.includes(x)))}
   {const ch=$('#cfChip');if(ch){ch.hidden=!CONCEPT_FILTER;if(CONCEPT_FILTER)ch.querySelector('b').textContent=CONCEPT_FILTER.t}}
-  sortItems();cbxSync();
+  sortItems();cbxSync();itemsTitle();
   shown=60; $('#cnt').textContent=filtered.length.toLocaleString(); drawHist(); renderCards();
 }
 function drawHist(){
@@ -707,7 +741,7 @@ async function fillPv(el){
 const FAV={d:(()=>{try{const x=JSON.parse(localStorage.getItem('fav')||'{}');return {s:new Set(x.s||[]),t:new Set(x.t||[])}}catch(e){return {s:new Set(),t:new Set()}}})(),
   has(k,v){return this.d[k].has(v)},
   toggle(k,v){this.d[k].has(v)?this.d[k].delete(v):this.d[k].add(v);try{localStorage.setItem('fav',JSON.stringify({s:[...this.d.s],t:[...this.d.t]}))}catch(e){};
-    if(typeof renderSchoolGrid==='function'&&META)renderSchoolGrid();if(['favs','favt'].includes($('#fsort').value))applyItems()}};
+    if(typeof renderSchoolGrid==='function'&&META){renderSchoolGrid();if(!$('#ihome').hidden)renderItemsHome();if(typeof renderPrepGrid==='function'&&PIDX2&&!$('#pgrid').hidden)renderPrepGrid()}if(['favs','favt'].includes($('#fsort').value))applyItems()}};
 // 검색되는 선택 칸
 const CBX=[];
 function enhanceSelect(sel){
@@ -804,6 +838,14 @@ $('#fsort').addEventListener('change',()=>{store.set('sortBy',$('#fsort').value)
 $('#fh').addEventListener('change',()=>{document.body.classList.toggle('hide-hints',$('#fh').checked);store.set('hideHints',$('#fh').checked?'1':'')});
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.classList&&e.target.classList.contains('card'))e.target.click()});
 $('#reset').onclick=()=>{CONCEPT_FILTER=null;['#q','#fs','#fy','#fk','#fg','#ft','#fm'].forEach(s=>$(s).value='');$('#fr').checked=false;$('#fo').checked=false;applyItems()};
+$('#ibackBtn').onclick=()=>{CONCEPT_FILTER=null;['#q','#fs','#fy','#fk','#fg','#ft','#fm'].forEach(x=>$(x).value='');$('#fr').checked=false;$('#fo').checked=false;applyItems();location.hash='items';window.scrollTo(0,0)};
+$('#igrid').addEventListener('click',e=>{const st=e.target.closest('[data-istar]');if(st){FAV.toggle('s',st.dataset.istar);return}
+  const b=e.target.closest('[data-i]');if(!b)return;const q=$('#iq').value.trim();
+  if(b.dataset.i==='all'){['#fs','#fy','#fk','#fg','#ft','#fm'].forEach(x=>$(x).value='');$('#q').value=($('#igrid').querySelectorAll('[data-i]').length===1)?q:'';applyItems();location.hash='i-all'}
+  else{['#q','#fy','#fk','#fg','#ft','#fm'].forEach(x=>$(x).value='');CONCEPT_FILTER=null;location.hash='i-'+b.dataset.i}
+  window.scrollTo(0,0)});
+$('#iq').addEventListener('input',()=>renderItemsHome());
+$('#iq').addEventListener('keydown',e=>{if(e.key==='Enter'){const b=$('#igrid .swrap:nth-child(2) [data-i]')||$('#igrid [data-i]');if(b)b.click()}});
 function debounce(f,ms){let t;return()=>{clearTimeout(t);t=setTimeout(f,ms)}}
 
 /* ---------- schools ---------- */
@@ -847,7 +889,7 @@ async function openConcept(id){
   const n=ITEMS.filter(i=>i.tags.some(x=>c.tags.includes(x))).length;
   el.innerHTML=md(t,{toc:false})+(c.tags.length&&n?`<p style="margin-top:24px"><button type="button" class="btn" id="cToItems">이 개념을 쓴 기출 ${n.toLocaleString()}문항 보기 →</button></p>`:'');
   enhanceConcept(el);typeset(el);const on=$('#clist .ci.on');if(on)on.scrollIntoView({block:'nearest'});
-  const b=$('#cToItems');if(b)b.onclick=()=>{CONCEPT_FILTER=c;location.hash='items';setTimeout(()=>{['#q','#fs','#fy','#fk','#fg','#ft','#fm'].forEach(x=>$(x).value='');applyItems()},0)};
+  const b=$('#cToItems');if(b)b.onclick=()=>{CONCEPT_FILTER=c;location.hash='i-all';setTimeout(()=>{['#q','#fs','#fy','#fk','#fg','#ft','#fm'].forEach(x=>$(x).value='');applyItems()},0)};
 }
 let CONCEPT_FILTER=null;
 /* 개념 글: 기초 개념 / 서술 / 기출 세 범주로 나누고, 위에 붙어 다니는 줄에서 소제목으로 바로 간다 */
@@ -906,11 +948,12 @@ function renderPrepGrid(){
   if(!list.length){grid.innerHTML='<div class="empty">찾는 학교가 없어요. 대비 자료는 의대·약대 논술이 있는 '+PIDX2.length+'개 학교만 있어요.</div>';return}
   grid.innerHTML=list.map(x=>{const ids=x.ids||[];const done=ids.filter(q=>rec.get(q).st==='done').length;const again=ids.filter(q=>{const t=rec.get(q).st;return t==='again'||t==='wrong'}).length;
     const pct=ids.length?Math.round(done/ids.length*100):0;
-    return `<button type="button" class="pcard" data-p="${esc(x.id)}"><span class="nm">${FAV.d.s.has(x.n)?'★ ':''}${esc(disp(x.n))}</span>
+    const fv=FAV.has('s',x.n);
+    return `<div class="swrap"><span class="star sgstar${fv?' on':''}" data-pstar="${esc(x.n)}" role="button" tabindex="0" aria-label="${fv?'즐겨찾기 해제':'즐겨찾기'}">${fv?'★':'☆'}</span><button type="button" class="pcard" data-p="${esc(x.id)}"><span class="nm">${esc(disp(x.n))}</span>
       <span class="psum">${texInline(x.sum||'')}</span>
       <span class="ptier"><b>1순위</b> ${x.t1||0} · <b>2순위</b> ${x.t2||0} · <b>3순위</b> ${x.t3||0}문항</span>
       <span class="bar2"><i style="width:${pct}%;background:var(--blue)"></i></span>
-      <span class="pprog">풀었음 ${done}/${ids.length}${again?` · 다시 볼 것 ${again}`:''}</span></button>`}).join('');
+      <span class="pprog">풀었음 ${done}/${ids.length}${again?` · 다시 볼 것 ${again}`:''}</span></button></div>`}).join('');
   typeset(grid);
 }
 $('#pq').addEventListener('input',()=>renderPrepGrid());
@@ -919,7 +962,7 @@ function markPrep(el){
   el.querySelectorAll('a[href^="#q-"]').forEach(a=>{const id=+a.getAttribute('href').slice(3);const st=rec.get(id).st;
     a.insertAdjacentHTML('afterend',st?` <span class="st ${st}">${ST_LAB[st]}</span>`:'')})
 }
-$('#pgrid').addEventListener('click',e=>{const b=e.target.closest('[data-p]');if(b)location.hash='prep-'+b.dataset.p});$('#pbackBtn').addEventListener('click',()=>{location.hash='prep'});
+$('#pgrid').addEventListener('click',e=>{const st=e.target.closest('[data-pstar]');if(st){FAV.toggle('s',st.dataset.pstar);return}const b=e.target.closest('[data-p]');if(b)location.hash='prep-'+b.dataset.p});$('#pbackBtn').addEventListener('click',()=>{location.hash='prep'});
 document.addEventListener('click',e=>{const a=e.target.closest('a[href^="#q-"]');if(!a)return;e.preventDefault();
   const id=+a.getAttribute('href').slice(3);if(!ITEMS[id])return;
   const scope=a.closest('.doc')||document;const ids=[...new Set([...scope.querySelectorAll('a[href^="#q-"]')].map(x=>+x.getAttribute('href').slice(3)))].filter(x=>ITEMS[x]);
@@ -942,9 +985,9 @@ async function showSchoolTab(k){
   const s=curSchool,el=$('#sbody');
   if(k.startsWith('d:')||k==='rel'||k==='year'){el.innerHTML='<div class="doc"><p class="note">불러오는 중…</p></div>';const t=await getDoc(k==='rel'?s.rel:k==='year'?s.year:k.slice(2));if(curSchool!==s)return;el.innerHTML='<div class="doc">'+md(t)+'</div>';typeset(el);return}
   if(k==='items'){const L=ITEMS.filter(i=>i.s===s.n&&trOK(i)).sort((a,b)=>b.y-a.y);
-    el.innerHTML=`<p class="note" style="margin:0 0 10px">${L.length}문항 · <a href="#items" id="toSearch">기출 검색에서 이 학교로 거르기</a></p><div class="cards">${L.map(card).join('')}</div>`;
+    el.innerHTML=`<p class="note" style="margin:0 0 10px">${L.length}문항 · <a href="#i-all" id="toSearch">기출 검색에서 이 학교로 거르기</a></p><div class="cards">${L.map(card).join('')}</div>`;
     $('#toSearch').onclick=()=>{setTimeout(()=>{$('#fs').value=s.n;applyItems()},0)};
-    el.querySelector('.cards').addEventListener('click',e=>{const b=e.target.closest('.tag');if(!b){const c=e.target.closest('.card');if(c)openSolve(+c.dataset.i,L);return}location.hash='items';setTimeout(()=>{['#q','#fs','#fy','#fk'].forEach(x=>$(x).value='');$('#ft').value=b.dataset.tag;applyItems()},0)});return}
+    el.querySelector('.cards').addEventListener('click',e=>{const b=e.target.closest('.tag');if(!b){const c=e.target.closest('.card');if(c)openSolve(+c.dataset.i,L);return}location.hash='i-all';setTimeout(()=>{['#q','#fs','#fy','#fk'].forEach(x=>$(x).value='');$('#ft').value=b.dataset.tag;applyItems()},0)});return}
   if(k==='scores'){const R=SC_BY[s.n];el.innerHTML=`<div class="tbl"><table><thead><tr><th>학년도</th><th>모집단위</th><th>지표</th><th style="text-align:right">값 / 만점</th><th>기타</th></tr></thead><tbody>${R.slice().sort((a,b)=>b[1]-a[1]).map(r=>`<tr><td>${esc(r[1])}</td><td>${esc(r[3])}</td><td>${esc(r[4])}</td>${valCell(r)}<td class="src">${esc(r[7])}</td></tr>`).join('')}</tbody></table></div>`}
 }
 
@@ -1140,10 +1183,11 @@ document.addEventListener('keydown',e=>{if($('#solve').hidden)return;if(e.key===
 let overviewDone=false;
 function route(){
   const h=location.hash.slice(1)||'items';
-  const v=h.startsWith('s-')?'school':h.startsWith('c-')?'concepts':h.startsWith('prep')?'prep':(['items','schools','concepts','graph','scores','overview'].includes(h)?h:'items');
+  const v=h.startsWith('s-')?'school':h.startsWith('c-')?'concepts':h.startsWith('prep')?'prep':h.startsWith('i-')?'items':(['items','schools','concepts','graph','scores','overview'].includes(h)?h:'items');
   $$('main section').forEach(s=>s.hidden=s.id!=='v-'+v);
   $$('nav.tabs a').forEach(a=>a.removeAttribute('aria-current'));
   $$('nav.tabs a').forEach(a=>{if(a.dataset.v===(v==='school'?'schools':v))a.setAttribute('aria-current','page')});
+  if(v==='items')showItems(h.startsWith('i-')?h.slice(2):null);
   if(v==='school')openSchool(h.slice(2));
   if(v==='concepts')openConcept(h.startsWith('c-')?h.slice(2):null);
   if(v==='prep')openPrep(h.startsWith('prep-')?h.slice(5):null);
@@ -1172,7 +1216,7 @@ Promise.all(['meta.json','items.json','scores.json'].map(f=>fetch(f).then(r=>r.j
    for(const g of [...TAGGROUPS,'기타']){const ts=used.filter(t=>(TAGDEF[t]?TAGDEF[t][0]:'기타')===g).sort((a,b)=>tagName(a).localeCompare(tagName(b),'ko'));if(!ts.length)continue;
      const og=document.createElement('optgroup');og.label=g;ts.forEach(t=>{const o=document.createElement('option');o.value=t;o.textContent=tagName(t)+' ('+df[t]+')';og.appendChild(o)});ft.appendChild(og)}
    renderTagGuide(df);$('#tgQ').addEventListener('input',()=>renderTagGuide(df));
-   $('#tgList').addEventListener('click',e=>{const st=e.target.closest('[data-tstar]');if(st){FAV.toggle('t',st.dataset.tstar);renderTagGuide(df);return}const b=e.target.closest('button[data-tag]');if(!b)return;['#q','#fs','#fy','#fk'].forEach(x=>$(x).value='');$('#ft').value=b.dataset.tag;applyItems();$('#tagGuide').open=false;$('#cnt').scrollIntoView({block:'start',behavior:'smooth'})})}
+   $('#tgList').addEventListener('click',e=>{const st=e.target.closest('[data-tstar]');if(st){FAV.toggle('t',st.dataset.tstar);renderTagGuide(df);return}const b=e.target.closest('button[data-tag]');if(!b)return;['#q','#fs','#fy','#fk'].forEach(x=>$(x).value='');$('#ft').value=b.dataset.tag;applyItems();if(!location.hash.startsWith('#i-'))location.hash='i-all';$('#tagGuide').open=false;$('#cnt').scrollIntoView({block:'start',behavior:'smooth'})})}
   fillSel('#ss',[...PUB].sort(),disp);
   fillSel('#sy',[...new Set(SCORES.map(r=>r[1]))].sort().reverse());
   const saved=store.get('tr');if(saved&&saved!=='all'){const b=$(`.seg button[data-tr="${saved}"]`);if(b){TR=saved;$$('.seg button').forEach(x=>x.setAttribute('aria-pressed',x===b))}}
