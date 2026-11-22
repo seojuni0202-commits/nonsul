@@ -548,14 +548,31 @@ function drawHist(){
 // 카드 미리보기: 문제 화면(제시문 상자·수식)을 작게 미리 보여 줌
 const pvObs=('IntersectionObserver' in window)?new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){pvObs.unobserve(e.target);fillPv(e.target)}}),{rootMargin:'300px'}):null;
 new MutationObserver(ms=>{for(const m of ms)for(const n of m.addedNodes){if(n.nodeType!==1)continue;(n.matches&&n.matches('.pv[data-pv]')?[n]:[...n.querySelectorAll('.pv[data-pv]')]).forEach(el=>pvObs?pvObs.observe(el):fillPv(el))}}).observe(document.body,{childList:true,subtree:true});
+// 미리보기에는 제시문과 문제만: 머리 정보·출제 의도·해설·채점 이후는 잘라낸다
+function pvTrim(d){
+  const isMath=t=>/\\\(|\\\[/.test(t);
+  const lead=x=>{const f=x.firstElementChild;return f&&(f.tagName==='STRONG'||f.tagName==='B')&&x.textContent.trim().startsWith(f.textContent.trim())?f.textContent.trim():''};
+  const isLabel=x=>{if(/^H[1-6]$/.test(x.tagName))return true;if(x.tagName!=='P')return false;const t=x.textContent.trim();if(!t||isMath(t))return false;
+    if(t.length<40&&(lead(x)===t||/^\d+\s*[.)]\s*\S/.test(t)||/^[\[<(]?\s*(문항|문제)\s*카드/.test(t)||/^\[[^\]]+\]$/.test(t)||/^<[^>]+>$/.test(t)))return true;return false};
+  const START=/(문항|문제)\s*및\s*제시문/;
+  const STOP=/출제\s?의도|출제\s?근거|문항\s?해설|^\s*(\d+\s*[.)]\s*)?해설|채점\s?기준|예시\s?답안|모범\s?답안|평가\s?기준|답안\s?예시/;
+  let kids=[...d.children];
+  const si=kids.findIndex(x=>(isLabel(x)||lead(x))&&START.test(x.textContent));
+  if(si>=0){kids.slice(0,si+1).forEach(x=>x.remove());kids=kids.slice(si+1)}
+  let cut=false;
+  for(const x of kids){
+    if(cut){x.remove();continue}
+    const t=x.textContent.trim();
+    if((isLabel(x)&&STOP.test(t))||(lead(x)&&STOP.test(lead(x)))||(x.tagName==='SECTION'&&x.classList.contains('intent'))){cut=true;x.remove();continue}
+    if(isLabel(x)||x.tagName==='HR'||(x.tagName==='BLOCKQUOTE'&&x.classList.contains('meta'))){x.remove();continue}
+  }
+}
 async function fillPv(el){
   const o=ORIG[+el.dataset.pv];if(!o||!o.q.length||!o.q.every(k=>TPIDX[k]))return;
   const parts=[];for(const k of o.q){const pk=await getTPack(TPIDX[k]);const t=(pk[k]||'').trim();if(t)parts.push(t)}
   if(!parts.length)return;
   const d=document.createElement('div');d.className='typed pvdoc';d.innerHTML=mdMath(parts.join('\n\n'));
-  pullIntent(d);
-  d.querySelectorAll('blockquote.meta,h1,h2,h3,h4,h5,hr,.tw').forEach(x=>x.remove());
-  [...d.children].forEach(x=>{if(x.tagName==='P'&&x.textContent.trim().length<25&&!x.querySelector('mjx-container')&&/카드|문항\s*\d|^\[?문항/.test(x.textContent))x.remove()});
+  pvTrim(d);
   if(!d.textContent.trim())return;
   el.innerHTML='';el.appendChild(d);el.classList.add('rich');
   if(window.MathJax&&MathJax.typesetPromise){try{await MathJax.typesetPromise([d])}catch(e){}}
@@ -757,11 +774,9 @@ $('#osub').addEventListener('click',e=>{const b=e.target.closest('button');if(!b
 let svList=[],svIdx=-1,svCur=null,tStart=0,tAcc=0,tTimer=null;
 function fmtT(ms){const s=Math.floor(ms/1000);return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')}
 function tick(){$('#svTime').textContent=fmtT(tAcc+(tStart?Date.now()-tStart:0))}
-$('#svTStart').onclick=()=>{if(tStart){tAcc+=Date.now()-tStart;tStart=0;clearInterval(tTimer);$('#svTStart').textContent='계속'}else{tStart=Date.now();tTimer=setInterval(tick,500);$('#svTStart').textContent='멈춤'}tick()};
-$('#svTReset').onclick=()=>{tStart=0;tAcc=0;clearInterval(tTimer);$('#svTStart').textContent='시작';tick()};
 function metaLine(bq){
   const segs=bq.textContent.trim().split(/\s+·\s+/).map(x=>x.trim()).filter(Boolean);
-  const EX=/^(\d+학년도\s*)?(수시모집\s*)?(대학별\s*)?(논술고사|(교과|일반)?\s?논술\s?(우수자|위주)?\s?전형|논술\([^)]*\)|논술)$/;
+  const EX=/^(\d+학년도\s*)?(수시모집\s*)?(대학별\s*)?(논술\s?고사|(교과|일반)?\s?논술\s?(우수자|위주)?\s?전형|논술\([^)]*\)|논술)$/;
   let ex=false;const a=[],b=[];
   for(const x of segs){if(EX.test(x)){ex=true;continue}if(/^예상\s?소요/.test(x))b.push(x);else a.push(x)}
   if(ex)a.unshift('논술');
@@ -821,7 +836,7 @@ function openSolve(id,list){
   svList=list&&list.length?list:[ITEMS[id]];svIdx=svList.findIndex(i=>i.id===id);if(svIdx<0){svList=[ITEMS[id]];svIdx=0}
   $('#solve').hidden=false;document.body.style.overflow='hidden';showSolve();$('#svClose').focus();
 }
-function closeSolve(){saveMemo();$('#solve').hidden=true;document.body.style.overflow='';renderCards();const c=document.querySelector(`.card[data-i="${svCur?svCur.id:-1}"]`);if(c)c.focus()}
+function closeSolve(){saveMemo();if(window.NSM&&NSM.onClose)NSM.onClose();$('#solve').hidden=true;document.body.style.overflow='';renderCards();const c=document.querySelector(`.card[data-i="${svCur?svCur.id:-1}"]`);if(c)c.focus()}
 function saveMemo(){if(!svCur)return;const r=rec.get(svCur.id);r.memo=$('#svMemo').value;if(!r.memo)delete r.memo;rec.set(svCur.id,r)}
 async function showSolve(){
   saveMemo();const i=svList[svIdx];svCur=i;const o=ORIG[i.id]||{q:[],a:[],src:''};
@@ -833,7 +848,7 @@ async function showSolve(){
   $('#svAnsNote').hidden=true;$('#svAnsBtn').disabled=!o.a.length;$('#svAnsBtn').textContent=o.a.length?'예시답안 보기':'연결된 예시답안 쪽 없음';
   $('#svSrc').textContent='';
   $('#solve .body').scrollTop=0;
-  tStart=0;tAcc=0;clearInterval(tTimer);$('#svTStart').textContent='시작';tick();
+  if(window.NSM&&NSM.onShow)NSM.onShow(i);
   const box=$('#svPages');
   {const oa=document.getElementById('ansArea');if(oa)oa.remove()}
   svIntent='';if(o.q.length)await showKeys(o.q,box,{pull:o.a.length>0});
@@ -856,7 +871,7 @@ $('#svZoom').onclick=()=>{const on=$('#svZoom').getAttribute('aria-pressed')!=='
 $('#svOrig').onclick=()=>{showOrig=!showOrig;$('#svOrig').setAttribute('aria-pressed',showOrig);showSolve()};
 $('#svWhite').onclick=()=>{const on=!document.body.classList.contains('paper-white');document.body.classList.toggle('paper-white',on);$('#svWhite').setAttribute('aria-pressed',on);store.set('white',on?'1':'')};
 if(store.get('white')){document.body.classList.add('paper-white');$('#svWhite').setAttribute('aria-pressed','true')}
-document.addEventListener('keydown',e=>{if($('#solve').hidden)return;if(e.key==='Escape')closeSolve();if(e.target.tagName==='TEXTAREA')return;if(e.key==='ArrowLeft')$('#svPrev').click();if(e.key==='ArrowRight')$('#svNext').click()});
+document.addEventListener('keydown',e=>{if($('#solve').hidden)return;if(e.key==='Escape')closeSolve();if(/^(TEXTAREA|INPUT|SELECT)$/.test(e.target.tagName))return;if(e.key==='ArrowLeft')$('#svPrev').click();if(e.key==='ArrowRight')$('#svNext').click()});
 
 /* ---------- routing ---------- */
 let overviewDone=false;
@@ -898,6 +913,14 @@ Promise.all(['meta.json','items.json','scores.json'].map(f=>fetch(f).then(r=>r.j
   ['#fs','#fk','#fg','#ft','#fy','#fm'].forEach(x=>enhanceSelect($(x)));
   applyItems();renderSchoolGrid();applyScores();route();
 }).catch(e=>{$('#cards').innerHTML='<div class="empty">데이터를 불러오지 못했어요. 새로고침해 보세요.</div>'});
+
+/* 필기·타이머·AI 채점(ink.js)에 넘기는 작은 API */
+window.NSM={cur:()=>svCur,orig:id=>ORIG[id],
+  info:i=>({school:disp(i.s),s:i.s,year:i.y,k:i.k,q:i.q,g:i.g}),
+  texts:async keys=>{const out=[];for(const k of keys){if(!TPIDX[k])continue;const pk=await getTPack(TPIDX[k]);const t=(pk[k]||'').trim();if(t)out.push(t)}return out.join('\n\n')}};
+(async()=>{try{const [c,j]=await Promise.all(['ink.css','ink.js'].map(f=>fetch(f).then(r=>r.ok?r.text():'').catch(()=>'')));
+  if(c){const st=document.createElement('style');st.textContent=c;document.head.appendChild(st)}
+  if(j){const sc=document.createElement('script');sc.textContent=j;document.body.appendChild(sc)}}catch(e){}})();
 })();
 </script>
 
