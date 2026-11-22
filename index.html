@@ -16,7 +16,7 @@
   let resolveKey;window.__keyReady=new Promise(r=>resolveKey=r);
   let DK=null,HK=null;
   async function useRaw(raw){
-    DK=await crypto.subtle.importKey('raw',raw,'AES-GCM',false,['decrypt']);
+    DK=await crypto.subtle.importKey('raw',raw,'AES-GCM',false,['encrypt','decrypt']);
     HK=await crypto.subtle.importKey('raw',raw,{name:'HMAC',hash:'SHA-256'},false,['sign']);
   }
   async function nameOf(path){
@@ -36,6 +36,9 @@
     const plain=new Response(new Blob([z]).stream().pipeThrough(new DecompressionStream('gzip')));
     return new Response(await plain.arrayBuffer(),{status:200,headers:{'Content-Type':path.endsWith('.json')?'application/json':'text/plain; charset=utf-8'}});
   };
+  // 모든 기기 공용 API 키: 사이트 키로 잠근 코드만 주고받는다(평문 키는 이 기기 밖으로 나가지 않음)
+  window.__nsmSeal=async t=>{await window.__keyReady;const iv=crypto.getRandomValues(new Uint8Array(12));const c=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},DK,te.encode(t)));const o=new Uint8Array(12+c.length);o.set(iv);o.set(c,12);return b64e(o)};
+  window.__nsmOpen=async b=>{await window.__keyReady;const u=b64d(b);return new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-GCM',iv:u.slice(0,12)},DK,u.slice(12)))};
   function open(){document.getElementById('lockGate').remove();resolveKey()}
   (async()=>{
     try{const s=localStorage.getItem(LS);if(s){await useRaw(b64d(s));open();return}}catch(e){}
