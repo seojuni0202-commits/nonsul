@@ -265,6 +265,25 @@ body{word-break:keep-all;overflow-wrap:break-word}
 .card .pv .pvdoc p{display:block;-webkit-line-clamp:unset;overflow:visible;font-size:inherit;margin:0 0 .5em;color:var(--ink)}
 .card .pv .pvdoc .psg{padding:8px 10px;margin:.2em 0 .7em}
 .card .pv .pvdoc mjx-container[display="true"]{margin:.3em 0!important}
+/* 검색되는 선택 칸·정렬 */
+.filters .fl{display:flex;flex-direction:column;gap:6px;font-size:.86rem;font-weight:600;color:#374151}
+.cbx-btn{font:inherit;font-size:1rem;font-weight:400;color:var(--ink);text-align:left;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%236b7280' stroke-width='1.6'/%3E%3C/svg%3E") no-repeat right 12px center;border:1px solid #d1d5db;border-radius:8px;padding:10px 32px 10px 12px;min-height:44px;width:100%;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cbx-btn:hover{border-color:var(--blue)}
+.cbx-pop{position:absolute;z-index:50;background:#fff;border:1px solid #d1d5db;border-radius:10px;box-shadow:0 10px 30px rgba(17,24,39,.14);padding:8px;max-width:min(420px,calc(100vw - 16px))}
+.cbx-pop[hidden]{display:none}
+.cbx-pop input{width:100%;font:inherit;font-size:.95rem;border:1px solid #d1d5db;border-radius:8px;padding:8px 10px;margin-bottom:6px}
+.cbx-pop input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-soft)}
+.cbx-pop ul{list-style:none;margin:0;padding:0;max-height:min(340px,55vh);overflow:auto}
+.cbx-pop li[data-v]{padding:8px 10px;border-radius:6px;cursor:pointer;font-size:.95rem}
+.cbx-pop li[data-v]:hover,.cbx-pop li.act{background:var(--blue-soft)}
+.cbx-pop li[aria-selected="true"]{font-weight:600;color:var(--blue)}
+.cbx-pop .cbx-g{font-size:.75rem;font-weight:700;color:var(--muted);padding:10px 10px 4px;letter-spacing:.03em}
+.cbx-pop .cbx-none{padding:10px;color:var(--muted);font-size:.9rem}
+.sortby{display:flex;align-items:center;gap:8px;margin-left:auto;flex:none;font-size:.9rem;color:#374151;font-weight:600}
+.sortby select{font:inherit;font-weight:400;font-size:.95rem;border:1px solid #d1d5db;border-radius:8px;padding:7px 10px;background:#fff}
+.cards h3.grp{grid-column:1/-1;display:flex;align-items:baseline;gap:10px;margin:18px 0 0;padding-bottom:8px;border-bottom:2px solid var(--ink);font-size:1.1rem}
+.cards h3.grp:first-child{margin-top:0}
+.cards h3.grp span{font-size:.85rem;font-weight:400;color:var(--muted)}
 /* 흰 바탕·가독성 개편 */
 body{background:#fff}
 header.top{background:#fff;background-image:none}
@@ -357,7 +376,7 @@ h2{font-size:1.55rem;margin:0 0 16px;letter-spacing:-.01em}
   <details class="tagguide" id="tagGuide"><summary>풀이 논리 태그 설명 <span id="tgCount"></span></summary>
     <div class="tg-in"><input type="search" id="tgQ" placeholder="태그 이름이나 설명으로 찾기 (예: 평균값, 접선, 대칭)" aria-label="태그 설명 검색"><div id="tgList"></div></div>
   </details>
-  <div class="summary"><span><strong id="cnt">0</strong>문항</span><svg class="hist" id="hist" viewBox="0 0 520 64" role="img" aria-label="학년도별 문항 수"></svg></div>
+  <div class="summary"><span><strong id="cnt">0</strong>문항</span><svg class="hist" id="hist" viewBox="0 0 520 64" role="img" aria-label="학년도별 문항 수"></svg><label class="sortby">보기<select id="fsort"><option value="school">학교별</option><option value="new">최신순</option><option value="old">오래된순</option><option value="logic">풀이 논리별</option><option value="kind">구분별</option><option value="line">계열별</option></select></label></div>
   <div class="cards" id="cards"></div>
   <div class="more"><button class="btn" type="button" id="moreBtn" hidden>더 보기</button></div>
 </section>
@@ -512,6 +531,7 @@ function applyItems(){
   const terms=q.split(/\s+/).filter(Boolean);
   filtered=ITEMS.filter(i=>trOK(i)&&(!s||i.s===s)&&(!y||i.y===y)&&(!k||kcat(i.k)===k)&&(!gc||i._g.includes(gc))&&(!t||i.tags.includes(t))&&(!r||i.rare)&&(!fo||ORIG[i.id])&&(!fm||(fm==='none'?!rec.get(i.id).st:rec.get(i.id).st===fm))&&
     (!terms.length||terms.every(w=>i._t.includes(w))));
+  sortItems();cbxSync();
   shown=60; $('#cnt').textContent=filtered.length.toLocaleString(); drawHist(); renderCards();
 }
 function drawHist(){
@@ -540,19 +560,80 @@ async function fillPv(el){
   el.innerHTML='';el.appendChild(d);el.classList.add('rich');
   if(window.MathJax&&MathJax.typesetPromise){try{await MathJax.typesetPromise([d])}catch(e){}}
 }
+// 검색되는 선택 칸
+const CBX=[];
+function enhanceSelect(sel){
+  const lab=sel.closest('label');const box=document.createElement('div');box.className=lab.className+' fl';
+  const cap=document.createElement('span');cap.textContent=[...lab.childNodes].filter(n=>n.nodeType===3).map(n=>n.textContent).join('').trim();
+  const btn=document.createElement('button');btn.type='button';btn.className='cbx-btn';btn.setAttribute('aria-haspopup','listbox');btn.setAttribute('aria-expanded','false');
+  box.append(cap,btn);lab.replaceWith(box);box.appendChild(sel);sel.hidden=true;sel.tabIndex=-1;
+  const pop=document.createElement('div');pop.className='cbx-pop';pop.hidden=true;
+  const inp=document.createElement('input');inp.type='search';inp.placeholder=cap.textContent+' 검색';inp.setAttribute('aria-label',cap.textContent+' 검색');
+  const ul=document.createElement('ul');ul.setAttribute('role','listbox');pop.append(inp,ul);document.body.appendChild(pop);
+  let act=-1;
+  const opts=()=>[...sel.querySelectorAll('option')].map(o=>({v:o.value,t:o.textContent,g:o.parentElement.tagName==='OPTGROUP'?o.parentElement.label:''}));
+  function draw(){
+    const q=inp.value.trim().toLowerCase();let g=null,h='',n=0;
+    for(const o of opts()){if(q&&!(o.t+' '+o.g).toLowerCase().includes(q))continue;
+      if(o.g&&o.g!==g){h+=`<li class="cbx-g" role="presentation">${esc(o.g)}</li>`;g=o.g}
+      h+=`<li role="option" data-v="${esc(o.v)}" aria-selected="${o.v===sel.value}">${esc(o.t)}</li>`;n++}
+    ul.innerHTML=h||'<li class="cbx-none">찾는 항목이 없어요</li>';act=-1;
+  }
+  function place(){const r=btn.getBoundingClientRect();pop.style.left=Math.min(r.left+scrollX,scrollX+innerWidth-Math.max(r.width,280)-8)+'px';pop.style.top=(r.bottom+scrollY+4)+'px';pop.style.minWidth=Math.max(r.width,280)+'px'}
+  function open(){CBX.forEach(c=>c.close());place();pop.hidden=false;btn.setAttribute('aria-expanded','true');inp.value='';draw();inp.focus();const s=ul.querySelector('[aria-selected="true"]');if(s)s.scrollIntoView({block:'nearest'})}
+  function close(){pop.hidden=true;btn.setAttribute('aria-expanded','false')}
+  function pick(v){sel.value=v;close();sync();sel.dispatchEvent(new Event('change'));btn.focus()}
+  function sync(){const o=sel.selectedOptions[0];btn.textContent=o?o.textContent:'전체'}
+  btn.onclick=()=>pop.hidden?open():close();
+  ul.addEventListener('click',e=>{const li=e.target.closest('li[data-v]');if(li)pick(li.dataset.v)});
+  inp.addEventListener('input',draw);
+  inp.addEventListener('keydown',e=>{const L=[...ul.querySelectorAll('li[data-v]')];
+    if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();act=Math.max(0,Math.min(L.length-1,act+(e.key==='ArrowDown'?1:-1)));L.forEach((x,i)=>x.classList.toggle('act',i===act));if(L[act])L[act].scrollIntoView({block:'nearest'})}
+    else if(e.key==='Enter'){e.preventDefault();const t=L[act>=0?act:0];if(t)pick(t.dataset.v)}
+    else if(e.key==='Escape'){close();btn.focus()}});
+  document.addEventListener('mousedown',e=>{if(!pop.hidden&&!pop.contains(e.target)&&e.target!==btn)close()});
+  window.addEventListener('resize',()=>{if(!pop.hidden)place()});
+  const c={sync,close};CBX.push(c);sync();return c;
+}
+function cbxSync(){CBX.forEach(c=>c.sync())}
 function card(i){
   const tags=i.tags.map(t=>`<button type="button" class="tag${META.rareSet.has(t)?' rare':''}" data-tag="${esc(t)}" title="${esc(tagDesc(t)||'이 논리를 쓴 문항 보기')}">${esc(tagName(t))}</button>`).join('');
   const st=rec.get(i.id).st,o=ORIG[i.id];
   return `<article class="card" tabindex="0" data-i="${i.id}"><div class="hd"><b>${esc(disp(i.s))}</b><span>${esc(i.y)}</span><span class="pill${i.k!=='본'?' mock':''}">${esc(i.k)}</span>${trPill(i)}<span>${esc(i.g)}</span><span>${esc(i.q)}</span></div>
   ${i.u?`<div class="unit">${esc(i.u)}</div>`:''}<div class="pv" data-pv="${i.id}"><p>${esc(i.idea)}</p></div>${i.key?`<div class="key">${esc(i.key)}</div>`:''}<div class="tags">${tags}</div><div class="open">${o&&o.q.length?'문제 열기 →':'요약만 있음 · 열기 →'}${st?`<span class="st ${st}">${ST_LAB[st]}</span>`:''}</div></article>`;
 }
+const yr=i=>parseInt(i.y)||0;
+const GORD={kind:KCATS,line:['의대','약대','자연']};
+function gkey(i,m){
+  if(m==='school')return disp(i.s);
+  if(m==='new'||m==='old')return (i.y||'연도 미상')+(/^\d+$/.test(i.y)?'학년도':'');
+  if(m==='logic')return i.tags.length?tagName(i.tags[0]):'태그 없음';
+  if(m==='kind')return kcat(i.k);
+  if(m==='line')return GCAT[(i._g||'N')[0]];
+}
+function sortItems(){
+  const m=$('#fsort').value;
+  const qn=i=>String(i.q).replace(/\d+/g,d=>d.padStart(4,'0'));
+  const base=(a,b)=>yr(b)-yr(a)||disp(a.s).localeCompare(disp(b.s),'ko')||qn(a).localeCompare(qn(b));
+  let cmp;
+  if(m==='school')cmp=(a,b)=>disp(a.s).localeCompare(disp(b.s),'ko')||yr(b)-yr(a)||qn(a).localeCompare(qn(b));
+  else if(m==='new')cmp=base;
+  else if(m==='old')cmp=(a,b)=>yr(a)-yr(b)||disp(a.s).localeCompare(disp(b.s),'ko')||qn(a).localeCompare(qn(b));
+  else if(m==='logic'){const c={};filtered.forEach(i=>{const k=gkey(i,m);c[k]=(c[k]||0)+1});cmp=(a,b)=>{const x=gkey(a,m),y=gkey(b,m);return (x===y?0:(c[y]-c[x])||x.localeCompare(y,'ko'))||base(a,b)}}
+  else {const o=GORD[m];cmp=(a,b)=>o.indexOf(gkey(a,m))-o.indexOf(gkey(b,m))||base(a,b)}
+  filtered.sort(cmp);
+  const cnt={};filtered.forEach(i=>{const k=gkey(i,m);cnt[k]=(cnt[k]||0)+1});sortItems.cnt=cnt;
+}
 function renderCards(){
-  const el=$('#cards');
-  el.innerHTML=filtered.length?filtered.slice(0,shown).map(card).join(''):'<div class="empty">조건에 맞는 문항이 없어요. 검색어를 줄이거나 필터를 풀어 보세요.</div>';
+  const el=$('#cards');const m=$('#fsort').value;let prev=null;
+  const html=filtered.slice(0,shown).map(i=>{const k=gkey(i,m);const h=k!==prev?`<h3 class="grp">${esc(k)}<span>${(sortItems.cnt[k]||0).toLocaleString()}문항</span></h3>`:'';prev=k;return h+card(i)}).join('');
+  el.innerHTML=filtered.length?html:'<div class="empty">조건에 맞는 문항이 없어요. 검색어를 줄이거나 필터를 풀어 보세요.</div>';
   $('#moreBtn').hidden=shown>=filtered.length;
 }
 $('#cards').addEventListener('click',e=>{const b=e.target.closest('.tag');if(!b){const c=e.target.closest('.card');if(c)openSolve(+c.dataset.i,filtered);return}const t=b.dataset.tag;$('#ft').value=t;applyItems();window.scrollTo({top:$('#v-items').offsetTop-60})});
 $('#moreBtn').onclick=()=>{shown+=60;renderCards()};
+{const sv=store.get('sortBy');if(sv&&$('#fsort').querySelector(`option[value="${sv}"]`))$('#fsort').value=sv}
+$('#fsort').addEventListener('change',()=>{store.set('sortBy',$('#fsort').value);applyItems()});
 ['#q'].forEach(s=>$(s).addEventListener('input',debounce(applyItems,150)));
 ['#fs','#fy','#fk','#fg','#ft','#fr','#fm','#fo'].forEach(s=>$(s).addEventListener('change',applyItems));
 $('#fh').addEventListener('change',()=>{document.body.classList.toggle('hide-hints',$('#fh').checked);store.set('hideHints',$('#fh').checked?'1':'')});
@@ -814,6 +895,7 @@ Promise.all(['meta.json','items.json','scores.json'].map(f=>fetch(f).then(r=>r.j
   fillSel('#sy',[...new Set(SCORES.map(r=>r[1]))].sort().reverse());
   const saved=store.get('tr');if(saved&&saved!=='all'){const b=$(`.seg button[data-tr="${saved}"]`);if(b){TR=saved;$$('.seg button').forEach(x=>x.setAttribute('aria-pressed',x===b))}}
   $('#stats').innerHTML=`<div><b>${META.schools.length}</b>학교</div><div><b>${ITEMS.length.toLocaleString()}</b>문항</div><div><b>${PUB.size}</b>점수 공개 학교</div>`;
+  ['#fs','#fk','#fg','#ft','#fy','#fm'].forEach(x=>enhanceSelect($(x)));
   applyItems();renderSchoolGrid();applyScores();route();
 }).catch(e=>{$('#cards').innerHTML='<div class="empty">데이터를 불러오지 못했어요. 새로고침해 보세요.</div>'});
 })();
