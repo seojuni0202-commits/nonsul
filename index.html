@@ -327,6 +327,11 @@ body{word-break:keep-all;overflow-wrap:break-word}
 .cdoc{background:#fff;border:1px solid var(--line);border-radius:12px;padding:24px clamp(16px,3vw,36px);min-width:0}
 .cdoc h1{font-size:1.5rem;margin:0 0 10px}
 .figp{margin:14px 0;text-align:center}
+.typed .qitem{padding-left:1.6em;text-indent:-1.6em;margin:0 0 1.1em}
+.typed .qitem>*{text-indent:0}.typed .qitem>p:first-child{text-indent:-1.6em}
+.typed .qitem p{margin:0 0 .35em}
+.typed .qitem>p:first-child>strong:first-child{display:inline-block;min-width:1.6em;text-indent:0}
+.typed .qitem br+mjx-container,.typed p br+mjx-container{margin-left:0}
 .qnone b{display:block;font-size:1.05rem;color:#1f2937;margin-bottom:6px}.qnone p{margin:4px 0}.figimg{max-width:100%;height:auto;display:inline-block;background:#fff}
 .pv .figimg{max-height:180px;width:auto!important}
 .cnav{position:sticky;top:var(--tabsh,52px);z-index:4;background:#fff;margin:10px calc(-1*clamp(16px,3vw,36px)) 6px;padding:8px clamp(16px,3vw,36px) 8px;border-bottom:1px solid var(--line)}
@@ -1141,6 +1146,14 @@ function metaLine(bq){
 }
 // 본문 속 수식을 시험지처럼: lim·Σ 첨자는 아래·위로, 맨 바깥 분수는 제 크기로
 function examTeX(x){
+  // \left( … \right) 안의 \dfrac 은 시험지처럼 글자 크기 분수로 (괄호가 줄보다 커지지 않게)
+  {let o='',lv=0;for(let i=0;i<x.length;i++){
+    if(x.startsWith('\\left',i)&&!/[a-zA-Z]/.test(x[i+5]||'')){lv++;o+='\\left';i+=4;continue}
+    if(x.startsWith('\\right',i)&&!/[a-zA-Z]/.test(x[i+6]||'')){lv=Math.max(0,lv-1);o+='\\right';i+=5;continue}
+    if(lv>0&&x.startsWith('\\dfrac',i)){o+='\\tfrac';i+=5;continue}
+    if(lv>0&&x.startsWith('\\frac',i)&&!/[a-zA-Z]/.test(x[i+5]||'')){o+='\\tfrac';i+=4;continue}
+    o+=x[i]}x=o}
+  x=x.replace(/\\left\s*\(([^()]*?\\tfrac[^()]*?)\\right\s*\)/g,'($1)');
   x=x.replace(/\\(lim|sum|prod)(?!\\limits)\s*(?=[_^])/g,'\\$1\\limits');
   let out='',d=0,pend=0;for(let i=0;i<x.length;i++){const c=x[i];
     if(c==='{')d++;else if(c==='}'){d--;if(d===0&&pend>0){out+=c;if(--pend===0)out+='}';continue}}
@@ -1150,6 +1163,32 @@ function examTeX(x){
     out+=c}
   if(pend>0)out+='}';
   return out}
+/* 시험지 한 줄 한 줄이 문단으로 쪼개져 줄 사이가 크게 벌어지던 것을, 시험지처럼 한 덩어리(줄바꿈 유지)로 묶는다.
+   - 앞 문단이 문장 끝(다. 오. ? ! :)으로 끝나지 않고 다음 문단이 짧은 이어진 줄이면 한 문단으로(줄바꿈 <br>)
+   - "1." "2." 처럼 번호로 시작하는 소문항은 그 아래 이어진 줄과 함께 내어쓰기 묶음(.qitem)으로 */
+function tightenFlow(w){
+  const isP=el=>el&&el.tagName==='P'&&!el.classList.contains('figp')&&!el.querySelector('img');
+  const txt=el=>el.textContent.replace(/\s+/g,' ').trim();
+  const ends=t=>/(다|오|요|라|까|음|함|됨|것)\s*[.。]\s*(\(.*\))?$|[.?!:;。]\s*$|\)\s*$/.test(t)&&!/[,，]\s*$/.test(t);
+  const num=el=>/^\s*(\(?\d{1,2}[.)]|\[\d|【|\(\s*[가-하]\s*\)|[ⅰ-ⅻ]|[①-⑳])/.test(txt(el))||(el.firstElementChild&&el.firstElementChild.tagName==='STRONG'&&/^\d{1,2}[.)]$|^\(\d\)$/.test(el.firstElementChild.textContent.trim())&&el.firstChild===el.firstElementChild);
+  // (가) 이어진 줄 합치기
+  let kids=[...w.children];
+  for(let i=1;i<kids.length;i++){
+    const a=kids[i-1],b=kids[i];
+    if(!isP(a)||!isP(b)||!a.parentNode)continue;
+    const ta=txt(a),tb=txt(b);
+    if(!ta||!tb||ends(ta)||num(b)||/^(<|\(단|※)/.test(tb)&&ends(ta))continue;
+    if(b.querySelector('mjx-container[display="true"]')||/\\\[/.test(b.innerHTML))continue;
+    a.appendChild(document.createElement('br'));while(b.firstChild)a.appendChild(b.firstChild);b.remove();kids[i]=a;
+  }
+  // (나) 번호 소문항 묶기: 번호 문단부터 다음 번호 문단/제목/상자 전까지
+  kids=[...w.children];let box=null;
+  for(const el of kids){
+    if(isP(el)&&num(el)){box=document.createElement('div');box.className='qitem';el.before(box);box.appendChild(el);continue}
+    if(box&&(isP(el)||el.tagName==='DIV'&&el.classList.contains('tw')||el.tagName==='P'&&el.classList.contains('figp'))&&!/^H\d/.test(el.tagName)){box.appendChild(el);continue}
+    box=null;
+  }
+}
 function mdMath(t){
   t=t.replace(/<!--figdesc[\s\S]*?-->/g,'').replace(/!\[[^\]\n]*\]\(fig:([\w-]+)\)/g,(_,k)=>`\n\n<p class="figp"><img class="figimg" data-fig="${k}" alt="그림" loading="lazy"></p>\n\n`);
   const M=[];const put=(tex,disp)=>{M.push([tex,disp]);return '@@M'+(M.length-1)+'@@'};
@@ -1160,6 +1199,7 @@ function mdMath(t){
   h=h.replace(/@@M(\d+)@@/g,(_,n)=>{const [x,d]=M[n];const e=x.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');return d?'\\['+e+'\\]':'\\('+e+'\\)'});
   const w=document.createElement('div');w.innerHTML=h;w.querySelectorAll('table').forEach(tb=>{const d=document.createElement('div');d.className='tw';tb.replaceWith(d);d.appendChild(tb)});
   w.querySelectorAll('blockquote').forEach(bq=>{const t=bq.textContent;if(/출제\s?범위|예상\s?소요|출제\s?근거|교육과정|성취\s?기준|논술고사\s?·|전형명/.test(t)&&t.length<400&&!/제시문/.test(t)){bq.classList.add('meta');metaLine(bq)}});
+  tightenFlow(w);
   // 이어진 제시문·조건 인용들을 한 상자로
   let grp=null;
   [...w.children].forEach(el=>{
