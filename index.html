@@ -204,7 +204,7 @@ body.hide-hints .card .key,body.hide-hints .card .tags{display:none}
 .solve .cols{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;max-width:1280px;margin:0 auto}
 @media (max-width:900px){.solve .cols{grid-template-columns:1fr}}
 .pages{display:flex;flex-direction:column;gap:10px;align-items:center;min-width:0}
-.doc ol.pq{list-style:none;max-width:52em;margin:10px 0 22px;padding:0;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.doc ol.pq{list-style:none;max-width:62em;margin:10px 0 22px;padding:0;border:1px solid var(--line);border-radius:10px;overflow:hidden}
 .doc ol.pq li{display:flex;gap:12px;align-items:flex-start;padding:10px 14px;border-top:1px solid var(--line);margin:0;line-height:1.5!important;max-width:none!important}
 .doc ol.pq li:first-child{border-top:0}
 .pq-n{flex:none;width:22px;height:22px;border-radius:50%;background:#eef1f5;color:#475467;font-size:.75rem;font-weight:600;display:flex;align-items:center;justify-content:center;margin-top:1px}
@@ -214,6 +214,9 @@ body.hide-hints .card .key,body.hide-hints .card .tags{display:none}
 .pq-w{color:#4b5563;font-size:.9rem;flex:1 1 220px}
 .pq-g{flex-basis:100%;display:flex;flex-wrap:wrap;gap:4px;margin-top:3px}
 .pq-g span{font-size:.76rem;color:#344054;background:#f2f4f7;border-radius:999px;padding:1px 8px;line-height:1.6}
+.pq-l{flex:0 0 36%;font-size:.86rem;color:#344054;line-height:1.55;border-left:2px solid #dbe4f5;padding-left:10px;margin-left:4px}
+.pq-l b{display:block;color:var(--blue);font-size:.76rem;font-weight:600;margin-bottom:1px}
+@media (max-width:900px){.doc ol.pq li{flex-wrap:wrap}.pq-l{flex:1 1 100%;box-sizing:border-box;max-width:calc(100% - 34px);margin:4px 0 0 34px;border-left:0;padding:6px 10px;background:#f5f8ff;border-radius:8px}}
 .svmain{min-width:0;display:flex;flex-direction:column;gap:10px}
 .svtop{width:100%;max-width:var(--pw,720px);margin:0 auto;display:flex;flex-direction:column;gap:8px}
 .svtop .box{margin:0;padding:10px 12px}
@@ -1085,16 +1088,32 @@ $('#pq').addEventListener('keydown',e=>{if(e.key==='Enter'){const b=$('#pgrid .p
 // 순위 표(순서·기출·왜·유형)를 한 줄짜리 목록으로: 카드 이름 / 이유 + 유형 칩
 function compactPrep(el){
   el.querySelectorAll('table').forEach(tb=>{const hs=[...tb.querySelectorAll('thead th')].map(x=>x.textContent.trim());
-    const iq=hs.indexOf('기출');if(iq<0)return;const iw=hs.findIndex(h=>/왜/.test(h)),ig=hs.findIndex(h=>/유형/.test(h));
+    const iq=hs.indexOf('기출');if(iq<0)return;const iw=hs.findIndex(h=>/왜/.test(h)),ig=hs.findIndex(h=>/유형/.test(h)),il=hs.findIndex(h=>/배울/.test(h));
     const ol=document.createElement('ol');ol.className='pq';
     tb.querySelectorAll('tbody tr').forEach((tr,k)=>{const td=[...tr.children];const a=td[iq]&&td[iq].querySelector('a[href^="#q-"]');if(!a)return;
       const id=+a.getAttribute('href').slice(3);const t=(window.NSM&&NSM.title(id))||a.textContent;a.textContent=t;
       const w=iw>=0&&td[iw]?td[iw].innerHTML.trim():'';const g=ig>=0&&td[ig]?td[ig].innerHTML.split(/\s+·\s+/).map(x=>x.trim()).filter(Boolean):[];
-      const li=document.createElement('li');li.innerHTML=`<span class="pq-n">${k+1}</span><div class="pq-b"><div class="pq-t"></div>${w?`<div class="pq-w">${w}</div>`:''}${g.length?`<div class="pq-g">${g.map(x=>`<span>${x}</span>`).join('')}</div>`:''}</div>`;
+      const ln=il>=0&&td[il]?td[il].innerHTML.trim():'';const lm=ln.match(/^(유형\s*[\d·,\s]+|기초)\s*·\s*/);
+      const li=document.createElement('li');li.innerHTML=`<span class="pq-n">${k+1}</span><div class="pq-b"><div class="pq-t"></div>${w?`<div class="pq-w">${w}</div>`:''}${g.length?`<div class="pq-g">${g.map(x=>`<span>${x}</span>`).join('')}</div>`:''}</div>${ln?`<div class="pq-l">${lm?`<b>${lm[1].trim()}</b>`:''}${lm?ln.slice(lm[0].length):ln}</div>`:''}`;
       li.querySelector('.pq-t').appendChild(a);ol.appendChild(li)});
     if(ol.children.length)tb.replaceWith(ol)});
 }
-function cardTitle(i){return i?`${disp(i.s)} ${i.y} ${kDisp(i)} · ${qDisp(i.q)}`:''}
+// 카드 이름: 같은 학교·학년도·구분·번호 카드가 여럿이면(회차·오전/오후·일반형/창의형) 시험 구분을 괄호로 붙인다
+let TDUP=null;
+// 짧은 시험 구분: 학과 표시의 괄호 안(예: '일반형 모의', '자연 1회차', '오후2'), 없으면 표시 그대로
+const gShort=i=>{const l=String(gDisp(i)||'');const m=l.match(/\(([^()]*)\)\s*$/);return (m?m[1]:l).replace(/^약술형\s*/,'').trim()};
+function cardTitle(i){if(!i)return '';
+  const base=`${disp(i.s)} ${i.y} ${kDisp(i)}`,q=qDisp(i.q);
+  if(!TDUP){TDUP={b:{},g:{},gs:{}};for(const j of ITEMS){if(!j)continue;const b=`${disp(j.s)} ${j.y} ${kDisp(j)}|${qDisp(j.q)}`;TDUP.b[b]=(TDUP.b[b]||0)+1;const g1=b+'|'+gShort(j);TDUP.g[g1]=(TDUP.g[g1]||0)+1;const g2=g1+'|'+j.subj;TDUP.gs[g2]=(TDUP.gs[g2]||0)+1}}
+  const b=base+'|'+q;if((TDUP.b[b]||0)<2)return `${base} · ${q}`;
+  const gs=gShort(i);let lab=gs;
+  if((TDUP.g[b+'|'+gs]||0)>1){lab=[gs,i.subj].filter(Boolean).join(' ');
+    if((TDUP.gs[b+'|'+gs+'|'+i.subj]||0)>1&&i.g&&!lab.includes(i.g))lab=[gs,i.g].filter(Boolean).join(' ')}
+  let t=lab?`${base} (${lab}) · ${q}`:`${base} · ${q}`;
+  // 그래도 같으면(같은 해 같은 구분의 모의가 두 벌) 번호 순서로 세트1·세트2
+  if(!TDUP.t){TDUP.t={};TDUP.busy=1;for(const j of ITEMS){if(!j)continue;const x=cardTitle(j);(TDUP.t[x]=TDUP.t[x]||[]).push(j.id)}TDUP.busy=0}
+  const grp=!TDUP.busy&&TDUP.t[t];if(grp&&grp.length>1)t=t.replace(/\) · /,` 세트${grp.indexOf(i.id)+1}) · `);
+  return t}
 function markPrep(el){
   el.querySelectorAll('a[href^="#q-"]').forEach(a=>{const id=+a.getAttribute('href').slice(3);const st=rec.get(id).st;
     a.insertAdjacentHTML('afterend',st?` <span class="st ${st}">${ST_LAB[st]}</span>`:'')})
