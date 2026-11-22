@@ -1452,7 +1452,7 @@ Promise.all(['meta.json','items.json','scores_idx.json','hide.json','idmap.json'
   try{const y=+sessionStorage.getItem('nsm:sc:'+location.hash);if(y)setTimeout(()=>window.scrollTo(0,y),700)}catch(e){}
   {const qs=new URLSearchParams(location.search),qid=qs.get('q');
    if(qid!=null&&ITEMS[+qid]){const L=(typeof filtered!=='undefined'&&filtered.some(x=>x.id===+qid))?filtered:null;openSolve(+qid,L);
-     if(qs.get('ink'))setTimeout(()=>{const b=document.getElementById('svInk');const ik=document.getElementById('ink');if(b&&(!ik||ik.hidden))b.click()},900)}}
+     if(qs.get('ink'))setTimeout(()=>{const b=document.getElementById('svInk');const ik=document.getElementById('ink');if(b&&(!ik||ik.hidden)){if(window.NSMInkRestore)NSMInkRestore();else b.click()}},900)}}
 }).catch(e=>{$('#cards').innerHTML='<div class="empty">데이터를 불러오지 못했어요. 새로고침해 보세요.</div>'});
 
 /* 필기·타이머·AI 채점(ink.js)에 넘기는 작은 API */
