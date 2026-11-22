@@ -216,7 +216,7 @@ body.paper-white .pages img{filter:none!important}
    - 문단 사이 0.4줄 더(R11 분절), 제시문·예시답안은 다른 바탕 영역(R12 공통 영역), 메타 정보는 흐리게(신호·일관성)
    - 긴 문단 3줄 미리보기(N03), 접힌 칸은 이름·분량 표시(Q02 국어) */
 body{word-break:keep-all;overflow-wrap:break-word}
-.typed{max-width:min(var(--pw,720px),100%);font-size:1.0625rem;line-height:1.75;padding:22px clamp(16px,4vw,32px);letter-spacing:-.003em}
+.typed{max-width:min(var(--pw,720px),100%);font-size:1.0625rem;line-height:1.9;padding:22px clamp(16px,4vw,32px);letter-spacing:-.003em}
 .typed p{margin:0 0 .7em}
 .typed h1,.typed h2,.typed h3,.typed h4{font-family:var(--f-body);font-weight:600;line-height:1.4;margin:1.6em 0 .45em;padding-left:10px;border-left:3px solid var(--line)}
 .typed h1,.typed h2{font-size:1.06rem;border-left-color:var(--blue)}
@@ -301,6 +301,26 @@ body{word-break:keep-all;overflow-wrap:break-word}
 .doclay .docbody>h2:first-of-type{margin-top:0;padding-top:0;border-top:0}
 @media (max-width:860px){.doclay{grid-template-columns:1fr;gap:12px}.doclay .toc{position:sticky;top:44px;z-index:3;background:#fff;display:flex;gap:6px;overflow-x:auto;max-height:none;border-right:0;border-bottom:1px solid var(--line);padding:8px 0}.doclay .toc-t{display:none}.doclay .toc-i{white-space:nowrap;border-left:0;border-bottom:2px solid transparent;border-radius:0;padding:6px 8px}.doclay .toc-i.on{border-bottom-color:var(--blue);background:none}}
 .card .hd .sess{color:#374151;font-weight:500}.card .hd .sess sup{font-size:.62rem;color:var(--muted);margin-left:2px}
+/* 필수 개념 탭 */
+.clay{display:grid;grid-template-columns:250px minmax(0,1fr);gap:32px;align-items:start}
+.clist{position:sticky;top:64px;max-height:calc(100vh - 84px);overflow:auto;border-right:1px solid var(--line);padding:0 12px 12px 0}
+.clist .cg{font-size:.75rem;font-weight:700;color:var(--blue);letter-spacing:.04em;margin:14px 0 4px}
+.clist .cg:first-child{margin-top:0}
+.clist .ci{display:block;font-size:.9rem;line-height:1.45;color:#374151;text-decoration:none;padding:6px 10px;border-radius:6px;border-left:2px solid transparent}
+.clist .ci:hover{background:var(--paper)}
+.clist .ci.on{color:var(--blue);font-weight:600;background:var(--blue-soft);border-left-color:var(--blue)}
+.cdoc{background:#fff;border:1px solid var(--line);border-radius:12px;padding:24px clamp(16px,3vw,36px);min-width:0}
+.cdoc h1{font-size:1.5rem;margin:0 0 10px}
+.cfchip{display:inline-flex;align-items:center;gap:6px;font-size:.9rem;background:var(--blue-soft);color:var(--blue);padding:4px 6px 4px 12px;border-radius:99px}
+.cfchip .btn{padding:3px 10px;font-size:.8rem}
+.doc a[href^="#c-"]{color:var(--blue);text-decoration:underline;text-underline-offset:3px;font-weight:500}
+@media (max-width:860px){.clay{grid-template-columns:1fr}.clist{position:static;max-height:260px;border-right:0;border-bottom:1px solid var(--line);padding-bottom:10px}}
+/* 즐겨찾기 */
+.star{display:inline-block;width:1.4em;color:#9ca3af;cursor:pointer;user-select:none;font-size:1rem;line-height:1}
+.star:hover{color:#f59e0b}.star.on{color:#f59e0b}
+.cbx-pop .cbx-g.fav{color:#b45309}
+.swrap{position:relative}.swrap .sbtn{width:100%;height:100%}
+.sgstar{position:absolute;top:10px;right:10px;z-index:1;font-size:1.15rem}
 /* 흰 바탕·가독성 개편 */
 body{background:#fff}
 header.top{background:#fff;background-image:none}
@@ -361,6 +381,7 @@ h2{font-size:1.55rem;margin:0 0 16px;letter-spacing:-.01em}
 <nav class="tabs" aria-label="보기"><div class="wrap">
   <a href="#items" data-v="items">기출 검색</a>
   <a href="#schools" data-v="schools">학교별 분석</a>
+  <a href="#concepts" data-v="concepts">필수 개념</a>
   <a href="#graph" data-v="graph">학교 간 연관</a>
   <a href="#scores" data-v="scores">합격자 점수</a>
   <a href="#overview" data-v="overview">종합·현황</a>
@@ -393,7 +414,7 @@ h2{font-size:1.55rem;margin:0 0 16px;letter-spacing:-.01em}
   <details class="tagguide" id="tagGuide"><summary>풀이 논리 태그 설명 <span id="tgCount"></span></summary>
     <div class="tg-in"><input type="search" id="tgQ" placeholder="태그 이름이나 설명으로 찾기 (예: 평균값, 접선, 대칭)" aria-label="태그 설명 검색"><div id="tgList"></div></div>
   </details>
-  <div class="summary"><span><strong id="cnt">0</strong>문항</span><svg class="hist" id="hist" viewBox="0 0 520 64" role="img" aria-label="학년도별 문항 수"></svg><label class="sortby">보기<select id="fsort"><option value="school">학교별</option><option value="new">최신순</option><option value="old">오래된순</option><option value="logic">풀이 논리별</option><option value="kind">구분별</option><option value="line">계열별</option></select></label></div>
+  <div class="summary"><span><strong id="cnt">0</strong>문항</span><span class="cfchip" id="cfChip" hidden>개념: <b></b> <button type="button" class="btn" id="cfClear">해제</button></span><svg class="hist" id="hist" viewBox="0 0 520 64" role="img" aria-label="학년도별 문항 수"></svg><label class="sortby">보기<select id="fsort"><option value="school">학교별</option><option value="new">최신순</option><option value="old">오래된순</option><option value="logic">풀이 논리별</option><option value="kind">구분별</option><option value="line">계열별</option><option value="favs">★ 즐겨찾기 학교</option><option value="favt">★ 즐겨찾기 논리</option></select></label></div>
   <div class="cards" id="cards"></div>
   <div class="more"><button class="btn" type="button" id="moreBtn" hidden>더 보기</button></div>
 </section>
@@ -439,6 +460,12 @@ h2{font-size:1.55rem;margin:0 0 16px;letter-spacing:-.01em}
   <div class="tbl"><table><thead><tr><th>학교</th><th>학년도</th><th>모집단위</th><th>지표</th><th style="text-align:right">값 / 만점</th><th>기타</th><th>출처</th></tr></thead><tbody id="stbody"></tbody></table></div>
   <div class="more"><button class="btn" type="button" id="smore" hidden>더 보기</button></div>
   <p class="note">점수를 공개하지 않는 곳: 연세, 고려, 이화, 가톨릭, 연세 미래, 홍익, 동덕, 고려 세종, 홍익 세종, 서울여대, 경기(자연). 성균관은 입학처 접속이 막혀 확인하지 못했어요.</p>
+</section>
+
+<section id="v-concepts" hidden>
+  <h2>필수 개념</h2>
+  <div class="ssearch"><input type="search" id="cq" placeholder="개념 찾기 (예: 평균값, 부분적분, 조건부확률, 유전)" aria-label="개념 검색" autocomplete="off"></div>
+  <div class="clay"><nav class="clist" id="clist" aria-label="개념 목록"></nav><article class="cdoc doc" id="cdoc"></article></div>
 </section>
 
 <section id="v-overview" hidden>
@@ -509,8 +536,8 @@ function getPack(c){if(!packs[c])packs[c]=fetch('img/'+c+'.json').then(r=>r.ok?r
 const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
 const docCache={};
 async function getDoc(f){if(!docCache[f]){const r=await fetch('docs/'+f+'.md');docCache[f]=r.ok?await r.text():'문서를 불러오지 못했어요.'}return docCache[f]}
-function md(t){t=t.replace(/(^|[^~])~(?!~)/g,'$1\\~');t=t.replace(/\*\*(?=\S)([^*\n]*?\S)\*\*/g,'<strong>$1</strong>');const h=DOMPurify.sanitize(marked.parse(t));const d=document.createElement('div');d.innerHTML=h;d.querySelectorAll('table').forEach(tb=>{const w=document.createElement('div');w.className='tw';tb.replaceWith(w);w.appendChild(tb)});
-  const kids=[...d.childNodes];if(kids.filter(n=>n.tagName==='H2').length<2)return d.innerHTML;
+function md(t,opt={}){const MM=[];t=t.replace(/\$\$([\s\S]+?)\$\$/g,(_,x)=>{MM.push('\\['+x+'\\]');return '@@D'+(MM.length-1)+'@@'}).replace(/\$([^\$\n]+?)\$/g,(_,x)=>{MM.push('\\('+examTeX(x)+'\\)');return '@@D'+(MM.length-1)+'@@'});t=t.replace(/(^|[^~])~(?!~)/g,'$1\\~');t=t.replace(/\*\*(?=\S)([^*\n]*?\S)\*\*/g,'<strong>$1</strong>');const h=DOMPurify.sanitize(marked.parse(t)).replace(/@@D(\d+)@@/g,(_,n)=>MM[n].replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'));const d=document.createElement('div');d.innerHTML=h;d.querySelectorAll('table').forEach(tb=>{const w=document.createElement('div');w.className='tw';tb.replaceWith(w);w.appendChild(tb)});
+  const kids=[...d.childNodes];if(opt.toc===false||kids.filter(n=>n.tagName==='H2').length<2)return d.innerHTML;
   // 절 목록을 왼쪽 사이드바로 (좁은 화면에서는 위쪽 가로 목록)
   const id=()=> 'sec'+Math.random().toString(36).slice(2,8);
   const lay=document.createElement('div');lay.className='doclay';
@@ -552,7 +579,7 @@ function renderTagGuide(df){
   for(const g of TAGGROUPS){
     const ts=Object.keys(TAGDEF).filter(t=>TAGDEF[t][0]===g&&df[t]>=3&&(!q||(TAGDEF[t][1]+' '+TAGDEF[t][2]).toLowerCase().includes(q))).sort((a,b)=>df[b]-df[a]);
     if(!ts.length)continue;n+=ts.length;
-    h+=`<div class="tg-grp"><h3>${esc(g)}</h3><dl>${ts.map(t=>`<dt><button type="button" data-tag="${esc(t)}" title="이 논리를 쓴 문항 보기">${esc(TAGDEF[t][1])}</button><small>${df[t]}문항</small></dt><dd>${esc(TAGDEF[t][2])}</dd>`).join('')}</dl></div>`}
+    h+=`<div class="tg-grp"><h3>${esc(g)}</h3><dl>${ts.map(t=>`<dt><span class="star${FAV.has('t',t)?' on':''}" data-tstar="${esc(t)}" role="button" aria-label="즐겨찾기">${FAV.has('t',t)?'★':'☆'}</span><button type="button" data-tag="${esc(t)}" title="이 논리를 쓴 문항 보기">${esc(TAGDEF[t][1])}</button><small>${df[t]}문항</small></dt><dd>${esc(TAGDEF[t][2])}</dd>`).join('')}</dl></div>`}
   $('#tgList').innerHTML=h||'<p style="color:var(--muted);margin:12px 0 0">찾는 태그가 없어요.</p>';
   if(!q)$('#tgCount').textContent=n+'개';
 }
@@ -562,6 +589,8 @@ function applyItems(){
   const terms=q.split(/\s+/).filter(Boolean);
   filtered=ITEMS.filter(i=>trOK(i)&&(!s||i.s===s)&&(!y||i.y===y)&&(!k||kcat(i.k)===k)&&(!gc||i._g.includes(gc))&&(!t||i.tags.includes(t))&&(!r||i.rare)&&(!fo||ORIG[i.id])&&(!fm||(fm==='none'?!rec.get(i.id).st:rec.get(i.id).st===fm))&&
     (!terms.length||terms.every(w=>i._t.includes(w))));
+  if(CONCEPT_FILTER){const T=CONCEPT_FILTER.tags;filtered=filtered.filter(i=>i.tags.some(x=>T.includes(x)))}
+  {const ch=$('#cfChip');if(ch){ch.hidden=!CONCEPT_FILTER;if(CONCEPT_FILTER)ch.querySelector('b').textContent=CONCEPT_FILTER.t}}
   sortItems();cbxSync();
   shown=60; $('#cnt').textContent=filtered.length.toLocaleString(); drawHist(); renderCards();
 }
@@ -608,6 +637,11 @@ async function fillPv(el){
   el.innerHTML='';el.appendChild(d);el.classList.add('rich');
   if(window.MathJax&&MathJax.typesetPromise){try{await MathJax.typesetPromise([d])}catch(e){}}
 }
+// 즐겨찾기(학교·풀이 논리) — 이 기기에 저장
+const FAV={d:(()=>{try{const x=JSON.parse(localStorage.getItem('fav')||'{}');return {s:new Set(x.s||[]),t:new Set(x.t||[])}}catch(e){return {s:new Set(),t:new Set()}}})(),
+  has(k,v){return this.d[k].has(v)},
+  toggle(k,v){this.d[k].has(v)?this.d[k].delete(v):this.d[k].add(v);try{localStorage.setItem('fav',JSON.stringify({s:[...this.d.s],t:[...this.d.t]}))}catch(e){};
+    if(typeof renderSchoolGrid==='function'&&META)renderSchoolGrid();if(['favs','favt'].includes($('#fsort').value))applyItems()}};
 // 검색되는 선택 칸
 const CBX=[];
 function enhanceSelect(sel){
@@ -620,13 +654,19 @@ function enhanceSelect(sel){
   const ul=document.createElement('ul');ul.setAttribute('role','listbox');pop.append(inp,ul);document.body.appendChild(pop);
   let act=-1;
   const opts=()=>[...sel.querySelectorAll('option')].map(o=>({v:o.value,t:o.textContent,g:o.parentElement.tagName==='OPTGROUP'?o.parentElement.label:''}));
+  const favKind=sel.id==='fs'?'s':sel.id==='ft'?'t':null;
+  function li(o){const fv=favKind&&o.v?FAV.has(favKind,o.v):false;
+    return `<li role="option" data-v="${esc(o.v)}" aria-selected="${o.v===sel.value}">${favKind&&o.v?`<span class="star${fv?' on':''}" data-star="${esc(o.v)}" title="${fv?'즐겨찾기 해제':'즐겨찾기'}" role="button" aria-label="${fv?'즐겨찾기 해제':'즐겨찾기'}">${fv?'★':'☆'}</span>`:''}${esc(o.t)}</li>`}
   function draw(){
-    const q=inp.value.trim().toLowerCase();let g=null,h='',n=0;
-    for(const o of opts()){if(q&&!(o.t+' '+o.g).toLowerCase().includes(q))continue;
+    const q=inp.value.trim().toLowerCase();let g=null,h='';
+    const all=opts().filter(o=>!q||(o.t+' '+o.g).toLowerCase().includes(q));
+    if(favKind){const fv=all.filter(o=>o.v&&FAV.has(favKind,o.v));if(fv.length){h+=`<li class="cbx-g fav" role="presentation">★ 즐겨찾기</li>`+fv.map(li).join('')+(all[0]&&all[0].g?'':`<li class="cbx-g" role="presentation">전체</li>`);}}
+    for(const o of all){
       if(o.g&&o.g!==g){h+=`<li class="cbx-g" role="presentation">${esc(o.g)}</li>`;g=o.g}
-      h+=`<li role="option" data-v="${esc(o.v)}" aria-selected="${o.v===sel.value}">${esc(o.t)}</li>`;n++}
+      h+=li(o)}
     ul.innerHTML=h||'<li class="cbx-none">찾는 항목이 없어요</li>';act=-1;
   }
+  ul.addEventListener('click',e=>{const st=e.target.closest('[data-star]');if(!st)return;e.stopPropagation();FAV.toggle(favKind,st.dataset.star);draw()},true);
   function place(){const r=btn.getBoundingClientRect();pop.style.left=Math.min(r.left+scrollX,scrollX+innerWidth-Math.max(r.width,280)-8)+'px';pop.style.top=(r.bottom+scrollY+4)+'px';pop.style.minWidth=Math.max(r.width,280)+'px'}
   function open(){CBX.forEach(c=>c.close());place();pop.hidden=false;btn.setAttribute('aria-expanded','true');inp.value='';draw();inp.focus();const s=ul.querySelector('[aria-selected="true"]');if(s)s.scrollIntoView({block:'nearest'})}
   function close(){pop.hidden=true;btn.setAttribute('aria-expanded','false')}
@@ -658,13 +698,19 @@ function gkey(i,m){
   if(m==='logic')return i.tags.length?tagName(i.tags[0]):'태그 없음';
   if(m==='kind')return kcat(i.k);
   if(m==='line')return GCAT[(i._g||'N')[0]];
+  if(m==='favs')return disp(i.s);
+  if(m==='favt'){const t=i.tags.find(t=>FAV.has('t',t));return t?tagName(t):'기타'}
 }
 function sortItems(){
   const m=$('#fsort').value;
+  if(m==='favs')filtered=filtered.filter(i=>FAV.has('s',i.s));
+  if(m==='favt')filtered=filtered.filter(i=>i.tags.some(t=>FAV.has('t',t)));
   const qn=i=>String(i.q).replace(/\d+/g,d=>d.padStart(4,'0'));
   const base=(a,b)=>yr(b)-yr(a)||disp(a.s).localeCompare(disp(b.s),'ko')||qn(a).localeCompare(qn(b));
   let cmp;
-  if(m==='school')cmp=(a,b)=>disp(a.s).localeCompare(disp(b.s),'ko')||yr(b)-yr(a)||qn(a).localeCompare(qn(b));
+  if(m==='favs'){const o=[...FAV.d.s];cmp=(a,b)=>o.indexOf(a.s)-o.indexOf(b.s)||yr(b)-yr(a)||qn(a).localeCompare(qn(b))}
+  else if(m==='favt'){const o=[...FAV.d.t];const f=i=>o.indexOf(i.tags.find(t=>FAV.has('t',t)));cmp=(a,b)=>f(a)-f(b)||yr(b)-yr(a)||disp(a.s).localeCompare(disp(b.s),'ko')}
+  else   if(m==='school')cmp=(a,b)=>disp(a.s).localeCompare(disp(b.s),'ko')||yr(b)-yr(a)||qn(a).localeCompare(qn(b));
   else if(m==='new')cmp=base;
   else if(m==='old')cmp=(a,b)=>yr(a)-yr(b)||disp(a.s).localeCompare(disp(b.s),'ko')||qn(a).localeCompare(qn(b));
   else if(m==='logic'){const c={};filtered.forEach(i=>{const k=gkey(i,m);c[k]=(c[k]||0)+1});cmp=(a,b)=>{const x=gkey(a,m),y=gkey(b,m);return (x===y?0:(c[y]-c[x])||x.localeCompare(y,'ko'))||base(a,b)}}
@@ -675,18 +721,21 @@ function sortItems(){
 function renderCards(){
   const el=$('#cards');const m=$('#fsort').value;let prev=null;
   const html=filtered.slice(0,shown).map(i=>{const k=gkey(i,m);const h=k!==prev?`<h3 class="grp">${esc(k)}<span>${(sortItems.cnt[k]||0).toLocaleString()}문항</span></h3>`:'';prev=k;return h+card(i)}).join('');
+  if(!filtered.length&&(m==='favs'||m==='favt')&&!(m==='favs'?FAV.d.s.size:FAV.d.t.size)){el.innerHTML='<div class="empty">아직 즐겨찾기한 '+(m==='favs'?'학교':'풀이 논리')+'가 없어요. '+(m==='favs'?'학교':'풀이 논리 태그')+' 칸을 펼쳐 ☆을 눌러 추가하세요.</div>';$('#moreBtn').hidden=true;return}
   el.innerHTML=filtered.length?html:'<div class="empty">조건에 맞는 문항이 없어요. 검색어를 줄이거나 필터를 풀어 보세요.</div>';
   $('#moreBtn').hidden=shown>=filtered.length;
 }
 $('#cards').addEventListener('click',e=>{const b=e.target.closest('.tag');if(!b){const c=e.target.closest('.card');if(c)openSolve(+c.dataset.i,filtered);return}const t=b.dataset.tag;$('#ft').value=t;applyItems();window.scrollTo({top:$('#v-items').offsetTop-60})});
 $('#moreBtn').onclick=()=>{shown+=60;renderCards()};
+$('#cfClear').onclick=()=>{CONCEPT_FILTER=null;applyItems()};
+$('#cq').addEventListener('input',()=>{const on=$('#clist .ci.on');drawCList(on?on.getAttribute('href').slice(3):null)});
 {const sv=store.get('sortBy');if(sv&&$('#fsort').querySelector(`option[value="${sv}"]`))$('#fsort').value=sv}
 $('#fsort').addEventListener('change',()=>{store.set('sortBy',$('#fsort').value);applyItems()});
 ['#q'].forEach(s=>$(s).addEventListener('input',debounce(applyItems,150)));
 ['#fs','#fy','#fk','#fg','#ft','#fr','#fm','#fo'].forEach(s=>$(s).addEventListener('change',applyItems));
 $('#fh').addEventListener('change',()=>{document.body.classList.toggle('hide-hints',$('#fh').checked);store.set('hideHints',$('#fh').checked?'1':'')});
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.classList&&e.target.classList.contains('card'))e.target.click()});
-$('#reset').onclick=()=>{['#q','#fs','#fy','#fk','#fg','#ft','#fm'].forEach(s=>$(s).value='');$('#fr').checked=false;$('#fo').checked=false;applyItems()};
+$('#reset').onclick=()=>{CONCEPT_FILTER=null;['#q','#fs','#fy','#fk','#fg','#ft','#fm'].forEach(s=>$(s).value='');$('#fr').checked=false;$('#fo').checked=false;applyItems()};
 function debounce(f,ms){let t;return()=>{clearTimeout(t);t=setTimeout(f,ms)}}
 
 /* ---------- schools ---------- */
@@ -697,18 +746,42 @@ function renderSchoolGrid(){
   const qn=AL[q]||q;
   const MED=new Set(ITEMS.filter(i=>/M/.test(i._g||'')).map(i=>i.s));
   const hit=s=>!q||(s.n+disp(s.n)).replace(/\s+/g,'').toLowerCase().includes(qn)||((q==='의대'||q==='메디컬')&&MED.has(s.n));
-  const list=META.schools.map(s=>({...s,c:schoolCounts(s.n)})).filter(s=>(TR==='all'||(TR==='수리'?s.c.m:s.c.b))&&hit(s)).sort((a,b)=>(b.c.m+b.c.b+b.c.o)-(a.c.m+a.c.b+a.c.o));
+  const list=META.schools.map(s=>({...s,c:schoolCounts(s.n)})).filter(s=>(TR==='all'||(TR==='수리'?s.c.m:s.c.b))&&hit(s)).sort((a,b)=>(FAV.has('s',b.n)-FAV.has('s',a.n))||(b.c.m+b.c.b+b.c.o)-(a.c.m+a.c.b+a.c.o));
   if($('#scount'))$('#scount').textContent=q?list.length+'개 학교':'';
   $('#sgrid').innerHTML=list.length?'':'<div class="empty">찾는 학교가 없어요.</div>';if(!list.length)return;
   $('#sgrid').innerHTML=list.map(s=>{const t=s.c.m+s.c.b+s.c.o||1;
-    return `<button type="button" class="sbtn" data-id="${s.id}"><span class="nm">${esc(disp(s.n))}</span>
+    return `<div class="swrap"><span class="star sgstar${FAV.has('s',s.n)?' on':''}" data-sstar="${esc(s.n)}" role="button" tabindex="0" aria-label="즐겨찾기">${FAV.has('s',s.n)?'★':'☆'}</span><button type="button" class="sbtn" data-id="${s.id}"><span class="nm">${esc(disp(s.n))}</span>
     <span class="bar2" aria-hidden="true"><i style="width:${100*s.c.m/t}%;background:var(--blue)"></i><i style="width:${100*s.c.b/t}%;background:var(--green)"></i><i style="width:${100*s.c.o/t}%;background:var(--muted)"></i></span>
-    <span class="ct">수리 ${s.c.m} · 생명 ${s.c.b}${s.c.o?' · 기타 '+s.c.o:''}${PUB.has(s.n)?' · 점수 공개':''}</span></button>`}).join('');
+    <span class="ct">수리 ${s.c.m} · 생명 ${s.c.b}${s.c.o?' · 기타 '+s.c.o:''}${PUB.has(s.n)?' · 점수 공개':''}</span></button></div>`}).join('');
 }
 $('#sq').addEventListener('input',()=>{renderSchoolGrid()});
 $('#sq').addEventListener('keydown',e=>{if(e.key==='Enter'){const b=$('#sgrid .sbtn');if(b)b.click()}});
-$('#sgrid').addEventListener('click',e=>{const b=e.target.closest('.sbtn');if(b)location.hash='s-'+b.dataset.id});
+$('#sgrid').addEventListener('click',e=>{const st=e.target.closest('[data-sstar]');if(st){FAV.toggle('s',st.dataset.sstar);return}const b=e.target.closest('.sbtn');if(b)location.hash='s-'+b.dataset.id});
 let curSchool=null;
+function typeset(el){if(window.MathJax&&MathJax.typesetPromise)MathJax.typesetPromise([el]).catch(()=>{})}
+// 필수 개념 탭
+let CIDX=null;
+async function loadCIdx(){if(!CIDX){try{CIDX=await fetch('concepts/index.json').then(r=>r.json())}catch(e){CIDX=[]}}return CIDX}
+function drawCList(cur){
+  const q=($('#cq').value||'').trim().toLowerCase();let g=null,h='';
+  for(const c of CIDX){if(q&&!(c.t+' '+c.scope+' '+c.subj).toLowerCase().includes(q))continue;
+    if(c.subj!==g){h+=`<div class="cg">${esc(c.subj)}</div>`;g=c.subj}
+    h+=`<a class="ci${c.id===cur?' on':''}" href="#c-${esc(c.id)}">${esc(c.t)}</a>`}
+  $('#clist').innerHTML=h||'<p class="note">찾는 개념이 없어요.</p>';
+}
+async function openConcept(id){
+  await loadCIdx();if(!id){id=(CIDX[0]||{}).id}
+  drawCList(id);const c=CIDX.find(x=>x.id===id);const el=$('#cdoc');
+  if(!c){el.innerHTML='<p class="note">개념을 찾지 못했어요.</p>';return}
+  el.innerHTML='<p class="note">불러오는 중…</p>';
+  let t='';try{const r=await fetch('concepts/'+id+'.md');t=r.ok?await r.text():''}catch(e){}
+  if(!t){el.innerHTML=`<h1>${esc(c.t)}</h1><p class="note">이 개념 글은 아직 준비 중이에요. 범위: ${esc(c.scope)}</p>`;return}
+  const n=ITEMS.filter(i=>i.tags.some(x=>c.tags.includes(x))).length;
+  el.innerHTML=md(t,{toc:false})+(c.tags.length&&n?`<p style="margin-top:24px"><button type="button" class="btn" id="cToItems">이 개념을 쓴 기출 ${n.toLocaleString()}문항 보기 →</button></p>`:'');
+  typeset(el);const on=$('#clist .ci.on');if(on)on.scrollIntoView({block:'nearest'});
+  const b=$('#cToItems');if(b)b.onclick=()=>{CONCEPT_FILTER=c;location.hash='items';setTimeout(()=>{['#q','#fs','#fy','#fk','#fg','#ft','#fm'].forEach(x=>$(x).value='');applyItems()},0)};
+}
+let CONCEPT_FILTER=null;
 function openSchool(id){
   const s=META.schools.find(x=>x.id===id);if(!s){location.hash='schools';return}
   curSchool=s;$('#sn').textContent=disp(s.n);
@@ -725,7 +798,7 @@ function openSchool(id){
 $('#ssub').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;$$('#ssub button').forEach(x=>x.setAttribute('aria-pressed',x===b));showSchoolTab(b.dataset.k)});
 async function showSchoolTab(k){
   const s=curSchool,el=$('#sbody');
-  if(k.startsWith('d:')||k==='rel'||k==='year'){el.innerHTML='<div class="doc"><p class="note">불러오는 중…</p></div>';const t=await getDoc(k==='rel'?s.rel:k==='year'?s.year:k.slice(2));if(curSchool!==s)return;el.innerHTML='<div class="doc">'+md(t)+'</div>';return}
+  if(k.startsWith('d:')||k==='rel'||k==='year'){el.innerHTML='<div class="doc"><p class="note">불러오는 중…</p></div>';const t=await getDoc(k==='rel'?s.rel:k==='year'?s.year:k.slice(2));if(curSchool!==s)return;el.innerHTML='<div class="doc">'+md(t)+'</div>';typeset(el);return}
   if(k==='items'){const L=ITEMS.filter(i=>i.s===s.n&&trOK(i)).sort((a,b)=>b.y-a.y);
     el.innerHTML=`<p class="note" style="margin:0 0 10px">${L.length}문항 · <a href="#items" id="toSearch">기출 검색에서 이 학교로 거르기</a></p><div class="cards">${L.map(card).join('')}</div>`;
     $('#toSearch').onclick=()=>{setTimeout(()=>{$('#fs').value=s.n;applyItems()},0)};
@@ -806,7 +879,7 @@ function renderOverview(){
   $('#osub').innerHTML=tabs.map((t,n)=>`<button type="button" data-k="${t.k}" aria-pressed="${n===0}">${esc(t.l)}</button>`).join('');
   showO(tabs[0].k);
 }
-async function showO(k){$('#obody').innerHTML='<div class="doc"><p class="note">불러오는 중…</p></div>';const t=await getDoc(k);$('#obody').innerHTML='<div class="doc">'+md(t)+'</div>'}
+async function showO(k){$('#obody').innerHTML='<div class="doc"><p class="note">불러오는 중…</p></div>';const t=await getDoc(k);$('#obody').innerHTML='<div class="doc">'+md(t)+'</div>';typeset($('#obody'))}
 $('#osub').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;$$('#osub button').forEach(x=>x.setAttribute('aria-pressed',x===b));showO(b.dataset.k)});
 
 
@@ -816,16 +889,24 @@ function fmtT(ms){const s=Math.floor(ms/1000);return String(Math.floor(s/60)).pa
 function tick(){$('#svTime').textContent=fmtT(tAcc+(tStart?Date.now()-tStart:0))}
 function metaLine(bq){
   const segs=bq.textContent.trim().split(/\s+·\s+/).map(x=>x.trim()).filter(Boolean);
-  const EX=/^(\d+학년도\s*)?(수시모집\s*)?(대학별\s*)?(논술\s?고사|(교과|일반)?\s?논술\s?(우수자|위주)?\s?전형|논술\([^)]*\)|논술)$/;
+  const EX=/^(\d+학년도\s*)?(수시모집\s*)?(대학별\s*)?(논술\s?고사|(교과|일반)?\s?논술\s?(\([^)]*\))?\s?(우수자|위주)?\s?전형|논술\([^)]*\)|논술)$/;
   let ex=false;const a=[],b=[];
   for(const x of segs){if(EX.test(x)){ex=true;continue}if(/^예상\s?소요/.test(x))b.push(x);else a.push(x)}
   if(ex)a.unshift('논술');
   bq.innerHTML='';const p=document.createElement('p');p.textContent=a.join(' · ');bq.appendChild(p);
   if(b.length){const q=document.createElement('p');q.textContent=b.join(' · ');bq.appendChild(q)}
 }
+// 본문 속 수식을 시험지처럼: lim·Σ 첨자는 아래·위로, 맨 바깥 분수는 제 크기로
+function examTeX(x){
+  x=x.replace(/\\(lim|sum|prod)(?!\\limits)\s*(?=[_^])/g,'\\$1\\limits');
+  let out='',d=0;for(let i=0;i<x.length;i++){const c=x[i];
+    if(c==='{')d++;else if(c==='}')d--;
+    if(d===0&&x.startsWith('\\frac',i)&&!/[a-zA-Z]/.test(x[i+5]||'')){out+='\\dfrac';i+=4;continue}
+    out+=c}
+  return out}
 function mdMath(t){
   const M=[];const put=(tex,disp)=>{M.push([tex,disp]);return '@@M'+(M.length-1)+'@@'};
-  t=t.replace(/\$\$([\s\S]+?)\$\$/g,(_,x)=>put(x.replace(/\n>\s?/g,'\n'),true)).replace(/\$([^\$\n]+?)\$/g,(_,x)=>put(x,false));
+  t=t.replace(/\$\$([\s\S]+?)\$\$/g,(_,x)=>put(x.replace(/\n>\s?/g,'\n'),true)).replace(/\$([^\$\n]+?)\$/g,(_,x)=>put(examTeX(x),false));
   t=t.replace(/(^|[^~])~(?!~)/g,'$1\\~');
   let h=DOMPurify.sanitize(marked.parse(t));
   h=h.replace(/@@M(\d+)@@/g,(_,n)=>{const [x,d]=M[n];const e=x.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');return d?'\\['+e+'\\]':'\\('+e+'\\)'});
@@ -917,11 +998,12 @@ document.addEventListener('keydown',e=>{if($('#solve').hidden)return;if(e.key===
 let overviewDone=false;
 function route(){
   const h=location.hash.slice(1)||'items';
-  const v=h.startsWith('s-')?'school':(['items','schools','graph','scores','overview'].includes(h)?h:'items');
+  const v=h.startsWith('s-')?'school':h.startsWith('c-')?'concepts':(['items','schools','concepts','graph','scores','overview'].includes(h)?h:'items');
   $$('main section').forEach(s=>s.hidden=s.id!=='v-'+v);
   $$('nav.tabs a').forEach(a=>a.removeAttribute('aria-current'));
   $$('nav.tabs a').forEach(a=>{if(a.dataset.v===(v==='school'?'schools':v))a.setAttribute('aria-current','page')});
   if(v==='school')openSchool(h.slice(2));
+  if(v==='concepts')openConcept(h.startsWith('c-')?h.slice(2):null);
   if(v==='graph')buildGraph();
   if(v==='overview'&&!overviewDone){overviewDone=true;renderOverview()}
   if(v!=='items')window.scrollTo({top:0});
@@ -946,7 +1028,7 @@ Promise.all(['meta.json','items.json','scores.json'].map(f=>fetch(f).then(r=>r.j
    for(const g of [...TAGGROUPS,'기타']){const ts=used.filter(t=>(TAGDEF[t]?TAGDEF[t][0]:'기타')===g).sort((a,b)=>tagName(a).localeCompare(tagName(b),'ko'));if(!ts.length)continue;
      const og=document.createElement('optgroup');og.label=g;ts.forEach(t=>{const o=document.createElement('option');o.value=t;o.textContent=tagName(t)+' ('+df[t]+')';og.appendChild(o)});ft.appendChild(og)}
    renderTagGuide(df);$('#tgQ').addEventListener('input',()=>renderTagGuide(df));
-   $('#tgList').addEventListener('click',e=>{const b=e.target.closest('button[data-tag]');if(!b)return;['#q','#fs','#fy','#fk'].forEach(x=>$(x).value='');$('#ft').value=b.dataset.tag;applyItems();$('#tagGuide').open=false;$('#cnt').scrollIntoView({block:'start',behavior:'smooth'})})}
+   $('#tgList').addEventListener('click',e=>{const st=e.target.closest('[data-tstar]');if(st){FAV.toggle('t',st.dataset.tstar);renderTagGuide(df);return}const b=e.target.closest('button[data-tag]');if(!b)return;['#q','#fs','#fy','#fk'].forEach(x=>$(x).value='');$('#ft').value=b.dataset.tag;applyItems();$('#tagGuide').open=false;$('#cnt').scrollIntoView({block:'start',behavior:'smooth'})})}
   fillSel('#ss',[...PUB].sort(),disp);
   fillSel('#sy',[...new Set(SCORES.map(r=>r[1]))].sort().reverse());
   const saved=store.get('tr');if(saved&&saved!=='all'){const b=$(`.seg button[data-tr="${saved}"]`);if(b){TR=saved;$$('.seg button').forEach(x=>x.setAttribute('aria-pressed',x===b))}}
