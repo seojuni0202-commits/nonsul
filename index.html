@@ -488,7 +488,7 @@ h2{font-size:1.55rem;margin:0 0 16px;letter-spacing:-.01em}
   <div class="filters">
     <label>학교<select id="ss"><option value="">공개한 학교 전체</option></select></label>
     <label>학년도<select id="sy"><option value="">전체</option></select></label>
-    <label class="grow">모집단위·지표 검색<input type="search" id="sq" placeholder="예: 의예, 약학, 평균, 70%"></label>
+    <label class="grow">모집단위·지표 검색<input type="search" id="scq" placeholder="예: 의예, 약학, 평균, 70%"></label>
     <label class="chk"><input type="checkbox" id="smed">의약계열만</label>
   </div>
   <div class="summary"><span><strong id="scnt">0</strong>기록</span></div>
@@ -506,6 +506,7 @@ h2{font-size:1.55rem;margin:0 0 16px;letter-spacing:-.01em}
 <section id="v-prep" hidden>
   <h2>2027 대비</h2>
   <div class="subtabs" id="psub" hidden></div>
+  <div class="ssearch" id="psearch"><input type="search" id="pq" placeholder="학교 이름으로 찾기 (예: 한양, 고대, 카대)" aria-label="대비 학교 검색" autocomplete="off"><span id="pcount"></span></div>
   <div class="pgrid" id="pgrid"></div>
   <p id="pback" hidden><button type="button" class="btn" id="pbackBtn">← 학교 목록</button></p>
   <div id="pbody"></div>
@@ -835,23 +836,32 @@ let PIDX2=null;
 async function openPrep(id){
   if(!PIDX2){try{PIDX2=await fetch('prep/index.json').then(r=>r.json())}catch(e){PIDX2=[]}}
   const grid=$('#pgrid'),el=$('#pbody'),back=$('#pback');
-  if(!id||!PIDX2.some(x=>x.id===id)){
-    back.hidden=true;el.innerHTML='';grid.hidden=false;
-    if(!PIDX2.length){grid.innerHTML='<p class="note">준비된 학교가 없어요.</p>';return}
-    const list=[...PIDX2].sort((a,b)=>(FAV.d.s.has(b.n)-FAV.d.s.has(a.n)));
-    grid.innerHTML=list.map(x=>{const ids=x.ids||[];const done=ids.filter(q=>rec.get(q).st==='done').length;const again=ids.filter(q=>{const t=rec.get(q).st;return t==='again'||t==='wrong'}).length;
-      const pct=ids.length?Math.round(done/ids.length*100):0;
-      return `<button type="button" class="pcard" data-p="${esc(x.id)}"><span class="nm">${FAV.d.s.has(x.n)?'★ ':''}${esc(disp(x.n))}</span>
-        <span class="psum">${texInline(x.sum||'')}</span>
-        <span class="ptier"><b>1순위</b> ${x.t1||0} · <b>2순위</b> ${x.t2||0} · <b>3순위</b> ${x.t3||0}문항</span>
-        <span class="bar2"><i style="width:${pct}%;background:var(--blue)"></i></span>
-        <span class="pprog">풀었음 ${done}/${ids.length}${again?` · 다시 볼 것 ${again}`:''}</span></button>`}).join('');
-    typeset(grid);return}
+  if(!id||!PIDX2.some(x=>x.id===id)){back.hidden=true;el.innerHTML='';grid.hidden=false;$('#psearch').hidden=false;renderPrepGrid();return}
+  $('#psearch').hidden=true;
   grid.hidden=true;back.hidden=false;
   el.innerHTML='<div class="doc"><p class="note">불러오는 중…</p></div>';
   let t='';try{const r=await fetch('prep/'+id+'.md');t=r.ok?await r.text():''}catch(e){}
   el.innerHTML='<div class="doc">'+md(t)+'</div>';typeset(el);markPrep(el);window.scrollTo(0,0);
 }
+function renderPrepGrid(){
+  const grid=$('#pgrid');if(!PIDX2||!PIDX2.length){grid.innerHTML='<p class="note">준비된 학교가 없어요.</p>';return}
+  const q=$('#pq').value.trim().replace(/\s+/g,'').toLowerCase();
+  const AL={'고대':'고려','연대':'연세','성대':'성균관','카대':'가톨릭','이대':'이화','숙대':'숙명','부대':'부산','경북대':'경북','인하대':'인하','아주대':'아주','미래':'미래캠퍼스','한대':'한양','중대':'중앙','건대':'건국','경희대':'경희','단대':'단국','설대':'서울대'};
+  const qn=AL[q]||q;
+  const list=PIDX2.filter(x=>!q||(x.n+disp(x.n)).replace(/\s+/g,'').toLowerCase().includes(qn)).sort((a,b)=>(FAV.d.s.has(b.n)-FAV.d.s.has(a.n)));
+  $('#pcount').textContent=q?list.length+'개 학교':'';
+  if(!list.length){grid.innerHTML='<div class="empty">찾는 학교가 없어요. 대비 자료는 의대·약대 논술이 있는 '+PIDX2.length+'개 학교만 있어요.</div>';return}
+  grid.innerHTML=list.map(x=>{const ids=x.ids||[];const done=ids.filter(q=>rec.get(q).st==='done').length;const again=ids.filter(q=>{const t=rec.get(q).st;return t==='again'||t==='wrong'}).length;
+    const pct=ids.length?Math.round(done/ids.length*100):0;
+    return `<button type="button" class="pcard" data-p="${esc(x.id)}"><span class="nm">${FAV.d.s.has(x.n)?'★ ':''}${esc(disp(x.n))}</span>
+      <span class="psum">${texInline(x.sum||'')}</span>
+      <span class="ptier"><b>1순위</b> ${x.t1||0} · <b>2순위</b> ${x.t2||0} · <b>3순위</b> ${x.t3||0}문항</span>
+      <span class="bar2"><i style="width:${pct}%;background:var(--blue)"></i></span>
+      <span class="pprog">풀었음 ${done}/${ids.length}${again?` · 다시 볼 것 ${again}`:''}</span></button>`}).join('');
+  typeset(grid);
+}
+$('#pq').addEventListener('input',()=>renderPrepGrid());
+$('#pq').addEventListener('keydown',e=>{if(e.key==='Enter'){const b=$('#pgrid .pcard');if(b)b.click()}});
 function markPrep(el){
   el.querySelectorAll('a[href^="#q-"]').forEach(a=>{const id=+a.getAttribute('href').slice(3);const st=rec.get(id).st;
     a.insertAdjacentHTML('afterend',st?` <span class="st ${st}">${ST_LAB[st]}</span>`:'')})
@@ -939,7 +949,7 @@ const MED=/의예|의학|의과|약학|약대|치의|한의|수의|의대/;
 function valCell(r){const v=parseFloat(r[5]),m=parseFloat(r[6]);const pct=v&&m?Math.min(100,100*v/m):null;
   return `<td class="num">${esc(r[5])}${r[6]?' / '+esc(r[6]):''}${pct!==null?`<span class="meter" aria-hidden="true"><i style="width:${pct}%"></i></span>`:''}</td>`}
 function applyScores(){
-  const s=$('#ss').value,y=$('#sy').value,q=$('#sq').value.trim().toLowerCase().split(/\s+/).filter(Boolean),med=$('#smed').checked;
+  const s=$('#ss').value,y=$('#sy').value,q=$('#scq').value.trim().toLowerCase().split(/\s+/).filter(Boolean),med=$('#smed').checked;
   sFilt=SCORES.filter(r=>(!s||r[0]===s)&&(!y||r[1]===y)&&(!med||MED.test(r[3]))&&(!q.length||q.every(w=>(r[3]+' '+r[4]+' '+r[2]).toLowerCase().includes(w))));
   sShown=100;$('#scnt').textContent=sFilt.length.toLocaleString();renderScores();
 }
@@ -949,7 +959,7 @@ function renderScores(){
   $('#smore').hidden=sShown>=sFilt.length;
 }
 $('#smore').onclick=()=>{sShown+=100;renderScores()};
-['#ss','#sy','#smed'].forEach(s=>$(s).addEventListener('change',applyScores));$('#sq').addEventListener('input',debounce(applyScores,150));
+['#ss','#sy','#smed'].forEach(s=>$(s).addEventListener('change',applyScores));$('#scq').addEventListener('input',debounce(applyScores,150));
 
 /* ---------- overview ---------- */
 function renderOverview(){
