@@ -709,10 +709,12 @@ function enhanceSelect(sel){
   const c={sync,close};CBX.push(c);sync();return c;
 }
 function cbxSync(){CBX.forEach(c=>c.sync())}
+// 문항 번호 뒤에 '번' (교시·차·형·점·[1] 같은 번호는 제외)
+function qDisp(q){q=String(q||'');if(/번/.test(q))return q;return q.replace(/(?<![\[\d.(\/])(\d+(?:\s*[-~]\s*\d+)*)(?=$|[\s(·,\[])/g,'$1번')}
 function card(i){
   const tags=i.tags.map(t=>`<button type="button" class="tag${META.rareSet.has(t)?' rare':''}" data-tag="${esc(t)}" title="${esc(tagDesc(t)||'이 논리를 쓴 문항 보기')}">${esc(tagName(t))}</button>`).join('');
   const st=rec.get(i.id).st,o=ORIG[i.id];
-  return `<article class="card" tabindex="0" data-i="${i.id}"><div class="hd"><b>${esc(disp(i.s))}</b><span>${esc(i.y)}</span><span class="pill${i.k!=='본'?' mock':''}">${esc(kDisp(i))}</span>${trPill(i)}<span class="sess" title="${esc(gTip(i))}">${esc(gDisp(i))}${sess(i)&&sess(i).e?'<sup>추정</sup>':''}</span><span>${esc(i.q)}</span></div>
+  return `<article class="card" tabindex="0" data-i="${i.id}"><div class="hd"><b>${esc(disp(i.s))}</b><span>${esc(i.y)}</span><span class="pill${i.k!=='본'?' mock':''}">${esc(kDisp(i))}</span>${trPill(i)}<span class="sess" title="${esc(gTip(i))}">${esc(gDisp(i))}${sess(i)&&sess(i).e?'<sup>추정</sup>':''}</span><span>${esc(qDisp(i.q))}</span></div>
   ${i.u?`<div class="unit">${esc(i.u)}</div>`:''}<div class="pv" data-pv="${i.id}"><p>${texInline(i.idea)}</p></div>${i.key?`<div class="key">${texInline(i.key)}</div>`:''}<div class="tags">${tags}</div><div class="open">${o&&o.q.length?'문제 열기 →':'요약만 있음 · 열기 →'}${st?`<span class="st ${st}">${ST_LAB[st]}</span>`:''}</div></article>`;
 }
 const yr=i=>parseInt(i.y)||0;
@@ -986,7 +988,7 @@ function closeSolve(){saveMemo();if(window.NSM&&NSM.onClose)NSM.onClose();$('#so
 function saveMemo(){if(!svCur)return;const r=rec.get(svCur.id);r.memo=$('#svMemo').value;if(!r.memo)delete r.memo;rec.set(svCur.id,r)}
 async function showSolve(){
   saveMemo();const i=svList[svIdx];svCur=i;const o=ORIG[i.id]||{q:[],a:[],src:''};
-  $('#svTitle').innerHTML=`${esc(disp(i.s))} ${esc(i.y)} ${esc(kDisp(i))} · ${esc(i.q)}<small title="${esc(gTip(i))}">${esc(gDisp(i))} · ${esc(i.subj)}${svList.length>1?` · ${svIdx+1} / ${svList.length}`:''}</small>`;
+  $('#svTitle').innerHTML=`${esc(disp(i.s))} ${esc(i.y)} ${esc(kDisp(i))} · ${esc(qDisp(i.q))}<small title="${esc(gTip(i))}">${esc(gDisp(i))} · ${esc(i.subj)}${svList.length>1?` · ${svIdx+1} / ${svList.length}`:''}</small>`;
   $('#svPrev').disabled=svIdx<=0;$('#svNext').disabled=svIdx>=svList.length-1;
   const r=rec.get(i.id);$$('#svStatus button').forEach(b=>b.setAttribute('aria-pressed',r.st===b.dataset.st));$('#svMemo').value=r.memo||'';
   $('#svHint').hidden=true;$('#svHintBtn').textContent='힌트 보기';
