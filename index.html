@@ -204,6 +204,16 @@ body.hide-hints .card .key,body.hide-hints .card .tags{display:none}
 .solve .cols{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;max-width:1280px;margin:0 auto}
 @media (max-width:900px){.solve .cols{grid-template-columns:1fr}}
 .pages{display:flex;flex-direction:column;gap:10px;align-items:center;min-width:0}
+.doc ol.pq{list-style:none;max-width:52em;margin:10px 0 22px;padding:0;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.doc ol.pq li{display:flex;gap:12px;align-items:flex-start;padding:10px 14px;border-top:1px solid var(--line);margin:0;line-height:1.5!important;max-width:none!important}
+.doc ol.pq li:first-child{border-top:0}
+.pq-n{flex:none;width:22px;height:22px;border-radius:50%;background:#eef1f5;color:#475467;font-size:.75rem;font-weight:600;display:flex;align-items:center;justify-content:center;margin-top:1px}
+.pq-b{min-width:0;flex:1;display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 10px}
+.pq-t{font-weight:600;flex:0 1 auto}
+.pq-t a{text-decoration:none}
+.pq-w{color:#4b5563;font-size:.9rem;flex:1 1 220px}
+.pq-g{flex-basis:100%;display:flex;flex-wrap:wrap;gap:4px;margin-top:3px}
+.pq-g span{font-size:.76rem;color:#344054;background:#f2f4f7;border-radius:999px;padding:1px 8px;line-height:1.6}
 .svmain{min-width:0;display:flex;flex-direction:column;gap:10px}
 .svtop{width:100%;max-width:var(--pw,720px);margin:0 auto;display:flex;flex-direction:column;gap:8px}
 .svtop .box{margin:0;padding:10px 12px}
@@ -663,10 +673,9 @@ html{touch-action:manipulation;-webkit-text-size-adjust:100%}
     <aside class="panel">
       <div class="box study" id="svStudy"><h4>추가 학습</h4>
         <div class="stabs" role="tablist">
-          <button type="button" role="tab" data-stab="know" aria-selected="true">개념·논리</button>
-          <button type="button" role="tab" data-stab="ask" aria-selected="false">질문</button>
-          <button type="button" role="tab" data-stab="near" aria-selected="false">섞어 풀기</button>
-          <button type="button" role="tab" data-stab="how" aria-selected="false">공부법</button>
+          <button type="button" role="tab" data-stab="how" aria-selected="true">공부법</button>
+          <button type="button" role="tab" data-stab="know" aria-selected="false">개념·논리</button>
+          <button type="button" role="tab" data-stab="near" aria-selected="false">관련 기출</button>
         </div>
         <div class="spane" id="svStudyBody"></div></div>
       <div class="box"><h4>풀이 힌트</h4>
@@ -1053,7 +1062,7 @@ async function openPrep(id){
   grid.hidden=true;back.hidden=false;
   el.innerHTML='<div class="doc"><p class="note">불러오는 중…</p></div>';
   let t='';try{const r=await fetch('prep/'+id+'.md');t=r.ok?await r.text():''}catch(e){}
-  el.innerHTML='<div class="doc">'+md(t)+'</div>';typeset(el);markPrep(el);window.scrollTo(0,0);
+  el.innerHTML='<div class="doc">'+md(t)+'</div>';compactPrep(el);typeset(el);markPrep(el);window.scrollTo(0,0);
 }
 function renderPrepGrid(){
   const grid=$('#pgrid');if(!PIDX2||!PIDX2.length){grid.innerHTML='<p class="note">준비된 학교가 없어요.</p>';return}
@@ -1075,6 +1084,19 @@ function renderPrepGrid(){
 }
 $('#pq').addEventListener('input',()=>renderPrepGrid());
 $('#pq').addEventListener('keydown',e=>{if(e.key==='Enter'){const b=$('#pgrid .pcard');if(b)b.click()}});
+// 순위 표(순서·기출·왜·유형)를 한 줄짜리 목록으로: 카드 이름 / 이유 + 유형 칩
+function compactPrep(el){
+  el.querySelectorAll('table').forEach(tb=>{const hs=[...tb.querySelectorAll('thead th')].map(x=>x.textContent.trim());
+    const iq=hs.indexOf('기출');if(iq<0)return;const iw=hs.findIndex(h=>/왜/.test(h)),ig=hs.findIndex(h=>/유형/.test(h));
+    const ol=document.createElement('ol');ol.className='pq';
+    tb.querySelectorAll('tbody tr').forEach((tr,k)=>{const td=[...tr.children];const a=td[iq]&&td[iq].querySelector('a[href^="#q-"]');if(!a)return;
+      const id=+a.getAttribute('href').slice(3);const t=(window.NSM&&NSM.title(id))||a.textContent;a.textContent=t;
+      const w=iw>=0&&td[iw]?td[iw].innerHTML.trim():'';const g=ig>=0&&td[ig]?td[ig].innerHTML.split(/\s+·\s+/).map(x=>x.trim()).filter(Boolean):[];
+      const li=document.createElement('li');li.innerHTML=`<span class="pq-n">${k+1}</span><div class="pq-b"><div class="pq-t"></div>${w?`<div class="pq-w">${w}</div>`:''}${g.length?`<div class="pq-g">${g.map(x=>`<span>${x}</span>`).join('')}</div>`:''}</div>`;
+      li.querySelector('.pq-t').appendChild(a);ol.appendChild(li)});
+    if(ol.children.length)tb.replaceWith(ol)});
+}
+function cardTitle(i){return i?`${disp(i.s)} ${i.y} ${kDisp(i)} · ${qDisp(i.q)}`:''}
 function markPrep(el){
   el.querySelectorAll('a[href^="#q-"]').forEach(a=>{const id=+a.getAttribute('href').slice(3);const st=rec.get(id).st;
     a.insertAdjacentHTML('afterend',st?` <span class="st ${st}">${ST_LAB[st]}</span>`:'')})
@@ -1318,10 +1340,14 @@ function openSolve(id,list){
 function urlQ(id,ink){const u=new URL(location.href);if(id==null){u.searchParams.delete('q');u.searchParams.delete('ink')}else{u.searchParams.set('q',id);if(ink)u.searchParams.set('ink','1');else if(ink===false)u.searchParams.delete('ink')}return u.pathname+u.search+u.hash}
 window.NSM_urlQ=urlQ;
 function requestCloseSolve(){const st=history.state||{};const n=st.ink?2:st.solve?1:0;if(n)history.go(-n);else closeSolve()}
-window.addEventListener('popstate',e=>{const st=e.state||{};if(!st.solve&&!$('#solve').hidden)closeSolve()});
+window.addEventListener('popstate',e=>{const st=e.state||{};if(!st.solve&&!$('#solve').hidden){closeSolve();return}
+  // 문제 화면에서 개념·다른 탭으로 갔다가 뒤로 오면 그 문제를 다시 연다
+  const q=new URLSearchParams(location.search).get('q');
+  if(st.solve&&$('#solve').hidden&&q!=null&&ITEMS[+q]){const L=(typeof svList!=='undefined'&&svList&&svList.some(x=>x.id===+q))?svList:null;openSolve(+q,L);
+    if(st.ink)setTimeout(()=>{const ik=document.getElementById('ink');if(ik&&ik.hidden&&window.NSMInkRestore)NSMInkRestore()},600)}});
 /* 추가 학습: 문항별 필수 개념·논리 라벨 + 인지과학 근거의 공부 재료(인출·자기설명·오류 점검·섞어 풀기·간격 복습) */
 const STUDY=(()=>{
-  let L=null,R=null,cur=null,tab=(()=>{try{return localStorage.getItem('stab')||'know'}catch(e){return 'know'}})();
+  let L=null,R=null,cur=null,tab=(()=>{try{const t=localStorage.getItem('stab2');return ['how','know','near'].includes(t)?t:'how'}catch(e){return 'how'}})();
   const DET={};const det=id=>{const c=Math.floor(id/200);if(!DET[c])DET[c]=fetch('study/s'+String(c).padStart(3,'0')+'.json').then(r=>r.json()).catch(()=>({}));return DET[c]};let DD={};
   let LP=null;const load=()=>LP||(LP=(async()=>{[L,R]=await Promise.all([fetch('study/idx.json').then(r=>r.json()).catch(()=>({})),fetch('routine.json').then(r=>r.json()).catch(()=>null)]);await loadCIdx()})());
   const cName=id=>{const c=(CIDX||[]).find(x=>x.id===id);return c?c.t:id};
@@ -1343,6 +1369,7 @@ const STUDY=(()=>{
       h+=`<div class="sh">필수 논리</div><div class="chips">${(x.t||[]).map(t=>`<span class="chip" title="${esc(tagDesc(t))}">${esc(tagName(t))}</span>`).join('')}</div>`;
       if(x.pre)h+=`<div class="sh">선수 지식</div><div>${texInline(x.pre)}</div>`;
       if(x.err&&x.err.length)h+=`<div class="sh">흔한 실수</div><ul class="err">${x.err.map(e=>`<li>${texInline(e)}</li>`).join('')}</ul>`;
+      if(x.wr&&x.wr.length)h+=`<div class="sh">서술 주의사항</div><ul class="err wr">${x.wr.map(e=>`<li>${texInline(e)}</li>`).join('')}</ul>`;
       return h}
     if(tab==='ask'){if(!x.rp)return '<p class="note">준비 중이에요.</p>';
       return `<div class="sh">문제를 덮고 답하기</div><p>${texInline(x.rp)}</p>
@@ -1356,7 +1383,7 @@ const STUDY=(()=>{
     return h}
   async function draw(){if(!cur)return;const el=$('#svStudyBody');await load();if(!cur)return;Object.assign(DD,await det(cur.id));if(!cur)return;
     $$('#svStudy [data-stab]').forEach(b=>b.setAttribute('aria-selected',b.dataset.stab===tab));el.innerHTML=body(cur);typeset(el)}
-  $('#svStudy .stabs').addEventListener('click',e=>{const b=e.target.closest('[data-stab]');if(!b)return;tab=b.dataset.stab;try{localStorage.setItem('stab',tab)}catch(e){}draw()});
+  $('#svStudy .stabs').addEventListener('click',e=>{const b=e.target.closest('[data-stab]');if(!b)return;tab=b.dataset.stab;try{localStorage.setItem('stab2',tab)}catch(e){}draw()});
   return {open(i){cur=i;draw()},draw,lab:i=>L?lab(i):null};
 })();
 function closeSolve(){try{if(new URLSearchParams(location.search).has('q'))history.replaceState(history.state&&history.state.solve?null:history.state,'',urlQ(null))}catch(e){}saveMemo();setTimeout(()=>{if(!$('#v-prep').hidden){$$('#pbody .st').forEach(x=>x.parentNode.removeChild(x));markPrep($('#pbody'))}},0);if(window.NSM&&NSM.onClose)NSM.onClose();$('#solve').hidden=true;document.body.style.overflow='';renderCards();const c=document.querySelector(`.card[data-i="${svCur?svCur.id:-1}"]`);if(c)c.focus()}
@@ -1470,6 +1497,7 @@ Promise.all(['meta.json','items.json','scores_idx.json','hide.json','idmap.json'
 
 /* 필기·타이머·AI 채점(ink.js)에 넘기는 작은 API */
 window.NSM={cur:()=>svCur,orig:id=>ORIG[id],
+  title:id=>cardTitle(ITEMS[id]),n:()=>ITEMS.length,
   info:i=>({school:disp(i.s),s:i.s,year:i.y,k:i.k,q:i.q,g:i.g}),
   texts:async keys=>{const out=[];for(const k of keys){if(!TPIDX[k])continue;const pk=await getTPack(TPIDX[k]);const t=(pk[k]||'').trim();if(t)out.push(t)}return out.join('\n\n')}};
 (async()=>{try{const [c,j]=await Promise.all(['ink.css','ink.js'].map(f=>fetch(f).then(r=>r.ok?r.text():'').catch(()=>'')));
