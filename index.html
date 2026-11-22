@@ -1277,8 +1277,13 @@ async function pageImgs(keys,box,keep){
 }
 function openSolve(id,list){
   svList=list&&list.length?list:[ITEMS[id]];svIdx=svList.findIndex(i=>i.id===id);if(svIdx<0){svList=[ITEMS[id]];svIdx=0}
+  const was=!$('#solve').hidden;
   $('#solve').hidden=false;document.body.style.overflow='hidden';showSolve();$('#svClose').focus();
+  // 뒤로가기(안드로이드·브라우저)로 문제 화면이 닫히도록 기록을 하나 쌓는다
+  if(!was&&!(history.state&&history.state.solve)){try{history.pushState({solve:1},'',location.href)}catch(e){}}
 }
+function requestCloseSolve(){const st=history.state||{};const n=st.ink?2:st.solve?1:0;if(n)history.go(-n);else closeSolve()}
+window.addEventListener('popstate',e=>{const st=e.state||{};if(!st.solve&&!$('#solve').hidden)closeSolve()});
 /* 추가 학습: 문항별 필수 개념·논리 라벨 + 인지과학 근거의 공부 재료(인출·자기설명·오류 점검·섞어 풀기·간격 복습) */
 const STUDY=(()=>{
   let L=null,R=null,cur=null,tab=(()=>{try{return localStorage.getItem('stab')||'know'}catch(e){return 'know'}})();
@@ -1350,14 +1355,14 @@ $('#svAnsBtn').onclick=async()=>{const n=$('#svAnsNote');const o=ORIG[svCur.id];
   else{n.hidden=true;$('#svAnsBtn').textContent='예시답안 보기';if(old)old.remove()}};
 $('#svStatus').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const r=rec.get(svCur.id);if(r.st===b.dataset.st){delete r.st;delete r.t}else{r.st=b.dataset.st;r.t=Date.now()}rec.set(svCur.id,r);STUDY.draw();$$('#svStatus button').forEach(x=>x.setAttribute('aria-pressed',r.st===x.dataset.st))});
 $('#svMemo').addEventListener('input',debounce(saveMemo,400));
-$('#svClose').onclick=closeSolve;
+$('#svClose').onclick=requestCloseSolve;
 $('#svPrev').onclick=()=>{if(svIdx>0){svIdx--;showSolve()}};
 $('#svNext').onclick=()=>{if(svIdx<svList.length-1){svIdx++;showSolve()}};
 $('#svZoom').onclick=()=>{const on=$('#svZoom').getAttribute('aria-pressed')!=='true';$('#svZoom').setAttribute('aria-pressed',on);$('#svPages').style.setProperty('--pw',on?'1000px':'720px');$('.solve .cols').style.gridTemplateColumns=on?'1fr':''};
 $('#svOrig').onclick=()=>{showOrig=!showOrig;$('#svOrig').setAttribute('aria-pressed',showOrig);showSolve()};
 $('#svWhite').onclick=()=>{const on=!document.body.classList.contains('paper-white');document.body.classList.toggle('paper-white',on);$('#svWhite').setAttribute('aria-pressed',on);store.set('white',on?'1':'')};
 if(store.get('white')){document.body.classList.add('paper-white');$('#svWhite').setAttribute('aria-pressed','true')}
-document.addEventListener('keydown',e=>{if($('#solve').hidden)return;if(e.key==='Escape')closeSolve();if(/^(TEXTAREA|INPUT|SELECT)$/.test(e.target.tagName))return;if(e.key==='ArrowLeft')$('#svPrev').click();if(e.key==='ArrowRight')$('#svNext').click()});
+document.addEventListener('keydown',e=>{if($('#solve').hidden)return;if(e.key==='Escape'){if(!document.querySelector('#ink')||document.querySelector('#ink').hidden)requestCloseSolve()}if(/^(TEXTAREA|INPUT|SELECT)$/.test(e.target.tagName))return;if(e.key==='ArrowLeft')$('#svPrev').click();if(e.key==='ArrowRight')$('#svNext').click()});
 
 /* ---------- routing ---------- */
 let overviewDone=false;
