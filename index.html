@@ -326,7 +326,8 @@ body{word-break:keep-all;overflow-wrap:break-word}
 .clist .ci.on{color:var(--blue);font-weight:600;background:var(--blue-soft);border-left-color:var(--blue)}
 .cdoc{background:#fff;border:1px solid var(--line);border-radius:12px;padding:24px clamp(16px,3vw,36px);min-width:0}
 .cdoc h1{font-size:1.5rem;margin:0 0 10px}
-.figp{margin:14px 0;text-align:center}.figimg{max-width:100%;height:auto;display:inline-block;background:#fff}
+.figp{margin:14px 0;text-align:center}
+.qnone b{display:block;font-size:1.05rem;color:#1f2937;margin-bottom:6px}.qnone p{margin:4px 0}.figimg{max-width:100%;height:auto;display:inline-block;background:#fff}
 .pv .figimg{max-height:180px;width:auto!important}
 .cnav{position:sticky;top:var(--tabsh,52px);z-index:4;background:#fff;margin:10px calc(-1*clamp(16px,3vw,36px)) 6px;padding:8px clamp(16px,3vw,36px) 8px;border-bottom:1px solid var(--line)}
 .ccats{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
@@ -598,7 +599,7 @@ h2{font-size:1.55rem;margin:0 0 16px;letter-spacing:-.01em}
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const disp=n=>n.replace(/_/g,' ');
-let META,ITEMS,SCORES,ORIG={},PIDX={},TPIDX={},TR='all';
+let META,ITEMS,SCORES,ORIG={},PIDX={},TPIDX={},TR='all',QNONE={};
 const tpacks={};
 function getTPack(c){if(!tpacks[c])tpacks[c]=fetch('txt/'+c+'.json').then(r=>r.ok?r.json():{}).catch(()=>({}));return tpacks[c]}
 const ST_LAB={done:'풀었음',again:'다시 볼 것',wrong:'틀림'};
@@ -740,6 +741,7 @@ function pvTrim(d){
   }
 }
 async function fillPv(el){
+  if(QNONE[+el.dataset.pv]){el.insertAdjacentHTML('afterbegin','<p class="note" style="margin:0 0 6px">문제 원문 없음</p>');return}
   const o=ORIG[+el.dataset.pv];if(!o||!o.q.length||!o.q.every(k=>TPIDX[k]))return;
   const parts=[];for(const k of o.q){const pk=await getTPack(TPIDX[k]);const t=(pk[k]||'').trim();if(t)parts.push(t)}
   if(!parts.length)return;
@@ -1104,6 +1106,7 @@ function examTeX(x){
 function mdMath(t){
   t=t.replace(/<!--figdesc[\s\S]*?-->/g,'').replace(/!\[[^\]\n]*\]\(fig:([\w-]+)\)/g,(_,k)=>`\n\n<p class="figp"><img class="figimg" data-fig="${k}" alt="그림" loading="lazy"></p>\n\n`);
   const M=[];const put=(tex,disp)=>{M.push([tex,disp]);return '@@M'+(M.length-1)+'@@'};
+  t=t.replace(/\*\*(?=\S)([^*\n]+?)\*\*/g,'<strong>$1</strong>');
   t=t.replace(/\$\$([\s\S]+?)\$\$/g,(_,x)=>put(x.replace(/\n>\s?/g,'\n'),true)).replace(/\$([^\$\n]+?)\$/g,(_,x)=>put(examTeX(x),false));
   t=t.replace(/(^|[^~])~(?!~)/g,'$1\\~');
   let h=DOMPurify.sanitize(marked.parse(t));
@@ -1170,6 +1173,9 @@ async function showSolve(){
   if(window.NSM&&NSM.onShow)NSM.onShow(i);
   const box=$('#svPages');
   {const oa=document.getElementById('ansArea');if(oa)oa.remove()}
+  const none=QNONE[i.id];
+  if(none){box.innerHTML=`<div class="noimg qnone"><b>문제 원문 없음</b><p>${esc(none)}</p><p style="color:var(--ink);text-align:left;margin:12px 0 0">문항 요약: ${texInline(i.idea||'')}</p></div>`;typeset(box);
+    if(o.a.length){const h=document.createElement('p');h.className='note';h.style.marginTop='12px';h.textContent='해설·채점 자료는 "예시답안 보기"로 볼 수 있어요.';box.appendChild(h)}return}
   svIntent='';if(o.q.length)await showKeys(o.q,box,{pull:o.a.length>0});
   else box.innerHTML=`<div class="noimg">이 문항은 원본 쪽을 찾지 못했어요. 아래 요약으로 문제를 확인하세요.<p style="color:var(--ink);text-align:left;margin:12px 0 0">${esc(i.idea)}</p></div>`;
 }
@@ -1216,6 +1222,7 @@ Promise.all(['meta.json','items.json','scores.json'].map(f=>fetch(f).then(r=>r.j
   try{SESSQ=await fetch('sessq.json').then(r=>r.ok?r.json():{})}catch(e){SESSQ={}}
   META=m;ITEMS=it;SCORES=sc;ITEMS.forEach((i,n)=>{i.id=n;i.tags=[...new Set(i.tags.map(t=>TAGALIAS[t]||t))]});
   try{const o=await fetch('orig.json').then(r=>r.json());ORIG=o.items;PIDX=o.pages;TPIDX=o.tpages||{}}catch(e){}
+  try{QNONE=await fetch('qnone.json').then(r=>r.ok?r.json():{})}catch(e){QNONE={}}
   if(store.get('hideHints')){$('#fh').checked=true;document.body.classList.add('hide-hints')}
   const df={};ITEMS.forEach(i=>i.tags.forEach(t=>df[t]=(df[t]||0)+1));
   META.rareSet=new Set(Object.keys(df).filter(t=>df[t]<30));
