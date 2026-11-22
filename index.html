@@ -1,0 +1,755 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#ffffff"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="논술 기출 지도"><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon-192.png"><link rel="icon" href="icon-192.png"></head><body><div id="lockGate" style="position:fixed;inset:0;z-index:9999;background:#fff;display:flex;align-items:center;justify-content:center;padding:24px;font-family:'IBM Plex Sans KR','Apple SD Gothic Neo','Malgun Gothic',sans-serif;color:#111827">
+  <form id="lockForm" style="width:100%;max-width:360px;display:flex;flex-direction:column;gap:14px" autocomplete="on">
+    <div style="font-size:1.5rem;font-weight:700">논술 기출 지도</div>
+    <label for="lockPw" style="font-size:.95rem;color:#4b5563">비밀번호를 입력하세요</label>
+    <input id="lockPw" type="password" autocomplete="current-password" autocapitalize="off" spellcheck="false" style="font:inherit;font-size:1.1rem;padding:12px 14px;border:1px solid #d1d5db;border-radius:10px;width:100%" required>
+    <label style="display:flex;gap:8px;align-items:center;font-size:.92rem;color:#374151"><input type="checkbox" id="lockKeep" checked style="width:18px;height:18px">이 기기에서 기억하기</label>
+    <button type="submit" id="lockBtn" style="font:inherit;font-size:1rem;font-weight:600;padding:12px;border:0;border-radius:10px;background:#2754c5;color:#fff;cursor:pointer">열기</button>
+    <p id="lockMsg" role="status" style="min-height:1.4em;margin:0;font-size:.9rem;color:#c4452e"></p>
+  </form>
+</div>
+<script>
+(function(){
+  const LS='nsm-key-v1';const te=new TextEncoder();
+  const b64d=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+  const b64e=u=>btoa(String.fromCharCode(...u));
+  let resolveKey;window.__keyReady=new Promise(r=>resolveKey=r);
+  let DK=null,HK=null;
+  async function useRaw(raw){
+    DK=await crypto.subtle.importKey('raw',raw,'AES-GCM',false,['decrypt']);
+    HK=await crypto.subtle.importKey('raw',raw,{name:'HMAC',hash:'SHA-256'},false,['sign']);
+  }
+  async function nameOf(path){
+    const s=new Uint8Array(await crypto.subtle.sign('HMAC',HK,te.encode('name:'+path)));
+    return [...s].map(b=>b.toString(16).padStart(2,'0')).join('').slice(0,24);
+  }
+  const realFetch=window.fetch.bind(window);
+  window.fetch=async function(input,init){
+    const url=typeof input==='string'?input:input.url;
+    if(/^[a-z]+:|^\/\//i.test(url))return realFetch(input,init);
+    await window.__keyReady;
+    const path=decodeURIComponent(url.replace(/^\.\//,'').split(/[?#]/)[0]);
+    const r=await realFetch('e/'+(await nameOf(path))+'.bin');
+    if(!r.ok)return new Response('',{status:404});
+    const buf=new Uint8Array(await r.arrayBuffer());
+    const z=await crypto.subtle.decrypt({name:'AES-GCM',iv:buf.slice(0,12)},DK,buf.slice(12));
+    const plain=new Response(new Blob([z]).stream().pipeThrough(new DecompressionStream('gzip')));
+    return new Response(await plain.arrayBuffer(),{status:200,headers:{'Content-Type':path.endsWith('.json')?'application/json':'text/plain; charset=utf-8'}});
+  };
+  function open(){document.getElementById('lockGate').remove();resolveKey()}
+  (async()=>{
+    try{const s=localStorage.getItem(LS);if(s){await useRaw(b64d(s));open();return}}catch(e){}
+    document.getElementById('lockPw').focus();
+  })();
+  document.getElementById('lockForm').addEventListener('submit',async e=>{
+    e.preventDefault();const msg=document.getElementById('lockMsg'),btn=document.getElementById('lockBtn');
+    msg.textContent='';btn.disabled=true;btn.textContent='여는 중…';
+    try{
+      const k=await realFetch('key.json',{cache:'no-store'}).then(r=>r.json());
+      const base=await crypto.subtle.importKey('raw',te.encode(document.getElementById('lockPw').value.trim()),'PBKDF2',false,['deriveKey']);
+      const kek=await crypto.subtle.deriveKey({name:'PBKDF2',salt:b64d(k.salt),iterations:k.iter,hash:'SHA-256'},base,{name:'AES-GCM',length:256},false,['decrypt']);
+      const raw=new Uint8Array(await crypto.subtle.decrypt({name:'AES-GCM',iv:b64d(k.iv)},kek,b64d(k.wrapped)));
+      await useRaw(raw);
+      if(document.getElementById('lockKeep').checked){try{localStorage.setItem(LS,b64e(raw))}catch(e){}}
+      open();
+    }catch(err){msg.textContent='비밀번호가 맞지 않아요.';btn.disabled=false;btn.textContent='열기'}
+  });
+})();
+</script>
+<title>논술 기출 지도</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hahmlet:wght@500;700&family=IBM+Plex+Sans+KR:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: 답안지 격자 머리띠 + 탭 바 아래 한 열 작업면. 검색 결과는 카드 목록, 그래프는 넓은 캔버스+옆 패널 */
+:root{
+  --paper:#f4f6f9; --sheet:#ffffff; --ink:#111827; --muted:#4b5563; --line:#e3e6eb; --grid:#eef0f3;
+  --blue:#2754c5; --blue-soft:#e6ecfb; --pencil:#c4452e; --pencil-soft:#fbe9e4; --green:#2f7d5b; --green-soft:#e3f2ea;
+  --f-display:"Hahmlet","Nanum Myeongjo",serif; --f-body:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif; --f-mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.6}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--sheet)}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header.top{background:var(--sheet);border-bottom:1px solid var(--line);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:22px 22px}
+header.top .wrap{padding-block:22px 14px;display:flex;flex-wrap:wrap;gap:8px 24px;align-items:end;justify-content:space-between}
+h1{font-family:var(--f-display);font-size:1.9rem;margin:0;line-height:1.2;text-wrap:balance}
+h1 small{display:block;font-family:var(--f-body);font-size:.82rem;font-weight:500;color:var(--muted);margin-top:4px}
+.stats{display:flex;gap:18px;font-variant-numeric:tabular-nums;color:var(--muted);font-size:.85rem}
+.stats b{display:block;font-family:var(--f-display);color:var(--ink);font-size:1.25rem}
+nav.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--sheet);border-bottom:1px solid var(--line)}
+nav.tabs .wrap{display:flex;gap:4px;overflow-x:auto;align-items:center}
+nav.tabs a{padding:11px 14px;color:var(--muted);text-decoration:none;font-weight:500;white-space:nowrap;border-bottom:2px solid transparent}
+nav.tabs a[aria-current="page"]{color:var(--ink);border-color:var(--blue)}
+nav.tabs a:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.seg{margin-left:auto;display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;flex:none}
+.seg button{border:0;background:transparent;color:var(--muted);padding:5px 12px;font:inherit;font-size:.85rem;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--blue);color:#fff}
+main .wrap{padding-block:20px 48px}
+section[hidden]{display:none}
+h2{font-family:var(--f-display);font-size:1.35rem;margin:0 0 4px}
+.lede{color:var(--muted);margin:0 0 16px;max-width:70ch}
+.filters{display:flex;flex-wrap:wrap;gap:10px;align-items:end;background:var(--sheet);border:1px solid var(--line);border-radius:8px;padding:12px}
+.filters label{display:flex;flex-direction:column;gap:3px;font-size:.75rem;color:var(--muted);letter-spacing:.02em}
+.filters input[type=search],.filters select{font:inherit;font-size:.9rem;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:6px 8px;min-width:0}
+.filters .grow{flex:1 1 220px}
+.filters .chk{flex-direction:row;align-items:center;gap:6px;font-size:.85rem;color:var(--ink);padding-bottom:6px}
+.btn{font:inherit;font-size:.85rem;border:1px solid var(--line);background:var(--sheet);color:var(--ink);border-radius:6px;padding:6px 10px;cursor:pointer}
+.btn:hover{border-color:var(--blue)}
+.summary{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;margin:14px 0 8px;font-size:.88rem;color:var(--muted)}
+.summary strong{color:var(--ink);font-variant-numeric:tabular-nums}
+.hist{width:100%;max-width:520px;height:64px}
+.hist text{fill:var(--muted);font-size:9px;font-family:var(--f-mono)}
+.hist rect{fill:var(--blue)}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+.card{background:var(--sheet);border:1px solid var(--line);border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.card .hd{display:flex;flex-wrap:wrap;gap:6px;align-items:baseline;font-size:.82rem;color:var(--muted)}
+.card .hd b{color:var(--ink);font-size:.95rem}
+.card .unit{font-size:.82rem;color:var(--blue)}
+.card p{margin:0;font-size:.9rem}
+.card .key{font-size:.86rem;border-left:3px solid var(--pencil);padding-left:8px;color:var(--ink)}
+.card .key::before{content:"결정 단계  ";color:var(--pencil);font-size:.75rem;font-weight:600}
+.pill{display:inline-block;font-size:.72rem;padding:1px 7px;border-radius:99px;background:var(--paper);border:1px solid var(--line);color:var(--muted)}
+.pill.bio{background:var(--green-soft);color:var(--green);border-color:transparent}
+.pill.math{background:var(--blue-soft);color:var(--blue);border-color:transparent}
+.pill.mock{background:var(--pencil-soft);color:var(--pencil);border-color:transparent}
+.tags{display:flex;flex-wrap:wrap;gap:4px}
+.tag{font-family:var(--f-mono);font-size:.7rem;border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:4px;padding:1px 6px;cursor:pointer}
+.tag.rare{border-color:var(--pencil);color:var(--pencil)}
+.tag:hover{border-color:var(--blue)}
+.more{display:flex;justify-content:center;margin-top:16px}
+.sgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
+.sbtn{text-align:left;background:var(--sheet);border:1px solid var(--line);border-radius:8px;padding:10px 12px;cursor:pointer;font:inherit;color:var(--ink);display:flex;flex-direction:column;gap:6px}
+.sbtn:hover{border-color:var(--blue)}
+.sbtn .nm{font-weight:600}
+.bar2{display:flex;height:6px;border-radius:3px;overflow:hidden;background:var(--grid)}
+.bar2 i{display:block;height:100%}
+.sbtn .ct{font-size:.75rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.legend{display:flex;gap:14px;font-size:.78rem;color:var(--muted);margin:0 0 10px;flex-wrap:wrap}
+.legend span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px;background:var(--c)}
+.school-head{display:flex;flex-wrap:wrap;gap:10px 24px;align-items:end;justify-content:space-between;margin-bottom:12px}
+.facts{display:flex;flex-wrap:wrap;gap:8px}
+.fact{background:var(--sheet);border:1px solid var(--line);border-radius:8px;padding:6px 12px;font-size:.8rem;color:var(--muted)}
+.fact b{display:block;color:var(--ink);font-size:1rem;font-variant-numeric:tabular-nums}
+.subtabs{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 12px}
+.subtabs button{font:inherit;font-size:.85rem;border:1px solid var(--line);background:var(--sheet);color:var(--muted);border-radius:99px;padding:4px 12px;cursor:pointer}
+.subtabs button[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.doc{background:var(--sheet);border:1px solid var(--line);border-radius:8px;padding:8px 22px 20px;min-width:0;overflow-wrap:anywhere}
+.doc h1{font-size:1.45rem;margin:16px 0 8px}
+.doc h2{font-size:1.2rem;margin:22px 0 6px;padding-top:10px;border-top:1px solid var(--line)}
+.doc h3{font-size:1.02rem;margin:16px 0 4px}
+.doc p,.doc li{max-width:78ch}
+.doc code{font-family:var(--f-mono);font-size:.82em;background:var(--paper);padding:0 4px;border-radius:3px}
+.doc .tw{overflow-x:auto;margin:10px 0}
+.doc table{border-collapse:collapse;font-size:.84rem;min-width:100%}
+.doc th,.doc td{border:1px solid var(--line);padding:5px 8px;vertical-align:top;text-align:left}
+.doc th{background:var(--paper)}
+.doc blockquote{margin:8px 0;padding:4px 12px;border-left:3px solid var(--blue);color:var(--muted)}
+.graphbox{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:12px}
+@media (max-width:860px){.graphbox{grid-template-columns:1fr}}
+#v-graph svg{width:100%;height:620px;background:var(--sheet);border:1px solid var(--line);border-radius:8px;display:block}
+@media (max-width:860px){#v-graph svg{height:440px}}
+#v-graph .lbl{font-size:10px;fill:var(--ink);pointer-events:none;paint-order:stroke;stroke:var(--sheet);stroke-width:3px}
+.side{background:var(--sheet);border:1px solid var(--line);border-radius:8px;padding:12px 14px;max-height:620px;overflow:auto;min-width:0}
+.side h3{margin:0 0 6px;font-family:var(--f-display)}
+.side ul{padding-left:18px;margin:6px 0}
+.side li{font-size:.85rem;margin-bottom:8px}
+.grade{font-size:.72rem;font-weight:600;color:var(--pencil)}
+.tbl{overflow-x:auto;background:var(--sheet);border:1px solid var(--line);border-radius:8px}
+.tbl table{border-collapse:collapse;width:100%;font-size:.84rem;font-variant-numeric:tabular-nums}
+.tbl th,.tbl td{padding:6px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.tbl th{position:sticky;top:0;background:var(--sheet);color:var(--muted);font-weight:500;font-size:.78rem}
+.tbl td.num,.tbl td:nth-child(-n+2),.tbl th{white-space:nowrap}
+.tbl td.num{text-align:right}
+.meter{display:inline-block;width:70px;height:6px;background:var(--grid);border-radius:3px;margin-left:8px;vertical-align:middle;overflow:hidden}
+.meter i{display:block;height:100%;background:var(--blue)}
+.tbl .src{color:var(--muted);font-size:.75rem;max-width:280px;overflow-wrap:anywhere}
+.note{font-size:.8rem;color:var(--muted);margin:10px 0 0}
+footer{border-top:1px solid var(--line);color:var(--muted);font-size:.8rem}
+footer .wrap{padding-block:18px 28px}
+.empty{padding:28px;text-align:center;color:var(--muted);background:var(--sheet);border:1px dashed var(--line);border-radius:8px}
+.card{cursor:pointer;position:relative}
+.card:hover{border-color:var(--blue)}
+.card:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.card .open{margin-top:auto;display:flex;gap:8px;align-items:center;font-size:.8rem;color:var(--blue);font-weight:500}
+.st{font-size:.72rem;padding:1px 7px;border-radius:99px;font-weight:600}
+.st.done{background:var(--green-soft);color:var(--green)}
+.st.again{background:var(--pencil-soft);color:var(--pencil)}
+.st.wrong{background:var(--pencil);color:#fff}
+body.hide-hints .card .key,body.hide-hints .card .tags{display:none}
+.solve{position:fixed;inset:0;z-index:20;background:var(--paper);display:flex;flex-direction:column}
+.solve[hidden]{display:none}
+.solve .bar{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;background:var(--sheet);border-bottom:1px solid var(--line);
+  padding-top:calc(10px + env(safe-area-inset-top,0px));padding-bottom:10px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.solve .bar .ttl{font-weight:600;flex:1 1 240px;min-width:0}
+.solve .bar .ttl small{display:block;font-weight:400;color:var(--muted);font-size:.8rem}
+.solve .body{flex:1;overflow:auto;padding-block:16px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.solve .cols{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;max-width:1280px;margin:0 auto}
+@media (max-width:900px){.solve .cols{grid-template-columns:1fr}}
+.pages{display:flex;flex-direction:column;gap:10px;align-items:center;min-width:0}
+.pages img{display:block;width:100%;max-width:var(--pw,720px);background:#fff;border:1px solid var(--line);border-radius:4px}
+body.paper-white .pages img{filter:none!important}
+.panel{display:flex;flex-direction:column;gap:12px;min-width:0}
+.box{background:var(--sheet);border:1px solid var(--line);border-radius:8px;padding:12px}
+.box h4{margin:0 0 8px;font-size:.85rem;color:var(--muted);font-weight:600;letter-spacing:.02em}
+.box textarea{width:100%;min-height:160px;font:inherit;font-size:.9rem;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:8px;resize:vertical}
+.timer{font-family:var(--f-mono);font-size:1.5rem;font-variant-numeric:tabular-nums}
+.row{display:flex;flex-wrap:wrap;gap:6px}
+.btn[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.reveal{border-top:1px dashed var(--line);margin-top:6px;padding-top:10px}
+.srcline{font-size:.75rem;color:var(--muted);overflow-wrap:anywhere}
+.typed{width:100%;max-width:var(--pw,720px);background:var(--sheet);border:1px solid var(--line);border-radius:6px;padding:20px 24px;font-size:1rem;line-height:1.85;overflow-wrap:anywhere;min-width:0}
+.typed blockquote{margin:10px 0;padding:6px 14px;border-left:3px solid var(--blue);background:var(--paper);color:var(--ink)}
+.typed table{border-collapse:collapse;margin:8px 0;font-size:.92rem}
+.typed th,.typed td{border:1px solid var(--line);padding:4px 8px}
+.typed .tw{overflow-x:auto}
+.typed mjx-container[display="true"]{overflow-x:auto;overflow-y:hidden;max-width:100%}
+.typed h2,.typed h3{font-size:1.02rem;margin:14px 0 6px}
+.typed .pg{font-size:.72rem;color:var(--muted);text-align:right;margin-top:6px}
+.noimg{padding:24px;text-align:center;color:var(--muted);background:var(--sheet);border:1px dashed var(--line);border-radius:8px;width:100%}
+
+/* 가독성(드롭박스 '국어 웹 가독성'·'해설 가독성' 기준 반영)
+   - 한글 본문 줄 간격 1.7배(R07), 한 줄 35~45자(R09·cpl), 왼쪽 정렬·낱말 단위 줄바꿈(R03·R04·Q04)
+   - 위계 3단 이하, 단마다 크기·굵기·여백·표지 중 둘 이상(Q02), 소제목 위 여백 > 아래 여백(Q03 근접)
+   - 문단 사이 0.4줄 더(R11 분절), 제시문·예시답안은 다른 바탕 영역(R12 공통 영역), 메타 정보는 흐리게(신호·일관성)
+   - 긴 문단 3줄 미리보기(N03), 접힌 칸은 이름·분량 표시(Q02 국어) */
+body{word-break:keep-all;overflow-wrap:break-word}
+.typed{max-width:min(var(--pw,720px),100%);font-size:1.0625rem;line-height:1.75;padding:22px clamp(16px,4vw,32px);letter-spacing:-.003em}
+.typed p{margin:0 0 .7em}
+.typed h1,.typed h2,.typed h3,.typed h4{font-family:var(--f-body);font-weight:600;line-height:1.4;margin:1.6em 0 .45em;padding-left:10px;border-left:3px solid var(--line)}
+.typed h1,.typed h2{font-size:1.06rem;border-left-color:var(--blue)}
+.typed h3,.typed h4{font-size:.98rem;color:var(--muted)}
+.typed>:first-child{margin-top:0}
+.typed p>strong:first-child{color:var(--ink)}
+.typed blockquote{margin:.8em 0 1em;padding:.7em 1em;border-left:3px solid var(--blue);background:var(--paper);border-radius:0 6px 6px 0}
+.typed blockquote p{margin:0 0 .5em}.typed blockquote p:last-child{margin:0}
+.typed blockquote.meta{border:0;background:none;padding:0;margin:0 0 1.1em;font-size:.8rem;line-height:1.55;color:var(--muted)}
+.typed blockquote.meta p{margin:0}
+.typed ol,.typed ul{padding-left:1.3em;margin:0 0 .8em}.typed li{margin:.25em 0}
+.typed table{font-size:.95rem;line-height:1.55}
+.typed th,.typed td{padding:6px 10px}
+.typed mjx-container:not([display="true"]){margin:0 .08em}
+.typed mjx-container[display="true"]{margin:.6em 0!important}
+#ansArea .typed{background:var(--green-soft);border-color:transparent}
+.card p{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;line-height:1.6}
+.card .key{line-height:1.55}
+.doc{line-height:1.75;font-size:1rem}
+.doc p,.doc li{max-width:40em}
+.doc h2,.doc h3{line-height:1.4}
+.doc details.sec{border-top:1px solid var(--line);padding:2px 0}
+.doc details.sec>summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:12px 0;font-family:var(--f-display);font-weight:700;font-size:1.08rem}
+.doc details.sec>summary::-webkit-details-marker{display:none}
+.doc details.sec>summary::before{content:"▸";color:var(--muted);font-size:.8rem;margin-right:6px}
+.doc details.sec[open]>summary::before{content:"▾"}
+.doc details.sec>summary .n{font-family:var(--f-body);font-weight:400;font-size:.78rem;color:var(--muted);white-space:nowrap}
+.doc details.sec>summary h2{all:unset}
+.lede{line-height:1.7}
+
+/* 흰 바탕·가독성 개편 */
+body{background:#fff}
+header.top{background:#fff;background-image:none}
+nav.tabs{background:rgba(255,255,255,.96);backdrop-filter:saturate(1.2) blur(6px)}
+.solve{background:#fff}
+main .wrap{padding-block:28px 56px}
+h2{font-size:1.55rem;margin:0 0 16px;letter-spacing:-.01em}
+.filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px 14px;align-items:end;background:#fff;border:1px solid var(--line);border-radius:12px;padding:18px;box-shadow:0 1px 2px rgba(17,24,39,.04)}
+.filters label{font-size:.86rem;font-weight:600;color:#374151;letter-spacing:0;gap:6px}
+.filters .grow{grid-column:span 2}
+@media (min-width:1000px){.filters{grid-template-columns:minmax(220px,1.6fr) repeat(6,minmax(0,1fr))}.filters .grow{grid-column:auto}}
+@media (max-width:560px){.filters{grid-template-columns:1fr 1fr;padding:14px;gap:12px 10px}.filters .grow{grid-column:1/-1}.filters .opts .btn{margin-left:0}}
+.filters select{font-weight:400;-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%236b7280' stroke-width='1.6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
+.filters input[type=search],.filters select{font-size:1rem;background-color:#fff;border:1px solid #d1d5db;border-radius:8px;padding:10px 12px;min-height:44px;width:100%}
+.filters input[type=search]::placeholder{color:#9ca3af}
+.filters input[type=search]:focus,.filters select:focus{border-color:var(--blue);outline:none;box-shadow:0 0 0 3px var(--blue-soft)}
+.filters .opts{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:10px 22px;align-items:center;padding-top:12px;border-top:1px solid var(--line)}
+.filters .chk{font-size:.95rem;font-weight:500;color:var(--ink);padding:0;gap:8px;cursor:pointer}
+.filters .chk input{width:18px;height:18px;accent-color:var(--blue)}
+.filters .opts .btn{margin-left:auto}
+.btn{font-size:.92rem;padding:8px 14px;border-radius:8px;border-color:#d1d5db}
+.tagguide{margin:10px 0 0;border:1px solid var(--line);border-radius:12px;background:#fff}
+.tagguide>summary{cursor:pointer;list-style:none;padding:12px 18px;font-size:.92rem;font-weight:600;color:#374151;display:flex;align-items:center;gap:8px}
+.tagguide>summary::-webkit-details-marker{display:none}
+.tagguide>summary::before{content:"▸";color:var(--muted);font-size:.8rem}
+.tagguide[open]>summary::before{content:"▾"}
+.tagguide>summary span{font-weight:400;color:var(--muted);font-size:.85rem}
+.tg-in{padding:0 18px 18px;max-height:min(70vh,640px);overflow:auto}
+.tg-in input{width:100%;font:inherit;font-size:.95rem;border:1px solid #d1d5db;border-radius:8px;padding:9px 12px;margin:2px 0 6px;position:sticky;top:0;background:#fff;z-index:1}
+.tg-grp{margin-top:18px}
+.tg-grp h3{font-size:.8rem;font-weight:700;color:var(--blue);letter-spacing:.04em;margin:0 0 6px}
+.tg-grp dl{margin:0;display:grid;grid-template-columns:minmax(150px,13em) 1fr;column-gap:18px}
+.tg-grp dt,.tg-grp dd{padding:9px 0;border-top:1px solid #f0f1f4;margin:0}
+.tg-grp dt button{all:unset;cursor:pointer;font-weight:600;color:var(--ink);line-height:1.45}
+.tg-grp dt button:hover,.tg-grp dt button:focus-visible{color:var(--blue);text-decoration:underline}
+.tg-grp dt small{display:block;font-weight:400;color:var(--muted);font-size:.78rem;margin-top:2px}
+.tg-grp dd{font-size:.92rem;line-height:1.65;color:#374151;max-width:48em}
+@media (max-width:560px){.tg-grp dl{grid-template-columns:1fr}.tg-grp dd{border-top:0;padding-top:0}}
+.summary{margin:20px 0 12px;font-size:.95rem}
+.cards{gap:16px;grid-template-columns:repeat(auto-fill,minmax(330px,1fr))}
+.card{border-radius:12px;padding:16px 18px;gap:8px;border-color:var(--line);box-shadow:0 1px 2px rgba(17,24,39,.04);transition:border-color .15s,box-shadow .15s}
+.card:hover{box-shadow:0 4px 14px rgba(17,24,39,.08)}
+.card .hd{font-size:.86rem}
+.card .hd b{font-size:1rem}
+.card p{font-size:.96rem;color:#1f2937}
+.card .unit{font-size:.86rem;font-weight:500}
+.card .key{font-size:.9rem}
+.tag{font-family:var(--f-body);font-size:.78rem;background:#f3f4f6;border-color:transparent;color:#374151;border-radius:99px;padding:3px 10px}
+.tag.rare{background:var(--pencil-soft);border-color:transparent;color:var(--pencil)}
+.tag:hover{border-color:var(--blue);color:var(--blue)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<header class="top"><div class="wrap">
+  <h1>논술 기출 지도<small>수리논술 · 생명논술 · 메디컬 46개교 기출을 공식 문항카드로 정리</small></h1>
+  <div class="stats" id="stats"><div><b>46</b>학교</div><div><b>2,945</b>문항</div><div><b>3,632</b>점수 기록</div></div>
+</div></header>
+<nav class="tabs" aria-label="보기"><div class="wrap">
+  <a href="#items" data-v="items">기출 검색</a>
+  <a href="#schools" data-v="schools">학교별 분석</a>
+  <a href="#graph" data-v="graph">학교 간 연관</a>
+  <a href="#scores" data-v="scores">합격자 점수</a>
+  <a href="#overview" data-v="overview">종합·현황</a>
+  <div class="seg" role="group" aria-label="논술 종류">
+    <button type="button" data-tr="all" aria-pressed="true">전체</button>
+    <button type="button" data-tr="수리" aria-pressed="false">수리</button>
+    <button type="button" data-tr="생명" aria-pressed="false">생명</button>
+  </div>
+</div></nav>
+
+<main><div class="wrap">
+
+<section id="v-items">
+  <h2>기출 검색</h2>
+  <div class="filters">
+    <label class="grow">검색어<input type="search" id="q" placeholder="예: 부분적분, 유전자"></label>
+    <label>학교<select id="fs"><option value="">전체 학교</option></select></label>
+    <label>학년도<select id="fy"><option value="">전체</option></select></label>
+    <label>구분<select id="fk"><option value="">전체</option></select></label>
+    <label>계열<select id="fg"><option value="">전체</option></select></label>
+    <label>풀이 논리 태그<select id="ft"><option value="">전체</option></select></label>
+    <label>내 기록<select id="fm"><option value="">전체</option><option value="none">아직 안 푼 문항</option><option value="done">풀었음</option><option value="again">다시 볼 것</option><option value="wrong">틀림</option></select></label>
+    <div class="opts">
+    <label class="chk"><input type="checkbox" id="fo">원문 있는 문항만</label>
+    <label class="chk"><input type="checkbox" id="fr">드문 논리를 쓴 문항만</label>
+    <label class="chk"><input type="checkbox" id="fh">풀이 힌트 가리기</label>
+    <button class="btn" type="button" id="reset">초기화</button>
+    </div>
+  </div>
+  <details class="tagguide" id="tagGuide"><summary>풀이 논리 태그 설명 <span id="tgCount"></span></summary>
+    <div class="tg-in"><input type="search" id="tgQ" placeholder="태그 이름이나 설명으로 찾기 (예: 평균값, 접선, 대칭)" aria-label="태그 설명 검색"><div id="tgList"></div></div>
+  </details>
+  <div class="summary"><span><strong id="cnt">0</strong>문항</span><svg class="hist" id="hist" viewBox="0 0 520 64" role="img" aria-label="학년도별 문항 수"></svg></div>
+  <div class="cards" id="cards"></div>
+  <div class="more"><button class="btn" type="button" id="moreBtn" hidden>더 보기</button></div>
+</section>
+
+<section id="v-schools" hidden>
+  <h2>학교별 분석</h2>
+  <p class="lede">학교를 고르면 그 학교의 출제 경향과 올해 예측, 매 연도가 이전 연도와 어떻게 이어지는지, 다른 학교와의 연관, 기출 목록, 합격자 점수를 한곳에서 볼 수 있어요. 막대는 수리(파랑)와 생명(초록) 문항 비율이에요.</p>
+  <div class="legend"><span style="--c:var(--blue)">수리</span><span style="--c:var(--green)">생명</span><span style="--c:var(--muted)">기타</span></div>
+  <div class="sgrid" id="sgrid"></div>
+</section>
+
+<section id="v-school" hidden>
+  <div class="school-head">
+    <div><a href="#schools" class="btn" style="text-decoration:none">← 학교 목록</a><h2 id="sn" style="margin-top:10px"></h2></div>
+    <div class="facts" id="sfacts"></div>
+  </div>
+  <div class="subtabs" id="ssub"></div>
+  <div id="sbody"></div>
+</section>
+
+<section id="v-graph" hidden>
+  <h2>학교 간 연관</h2>
+  <p class="lede">실선은 원문을 대조해 판정한 연결이에요(화살표: 앞선 학교 → 따른 학교). 파란 선은 풀이 논리, 빨간 선은 소재가 닮은 경우예요. 점선은 풀이 논리 태그 분포가 비슷한 학교끼리 이은 거예요. 점 크기는 문항 수예요. 학교를 누르면 오른쪽에 근거가 나와요.</p>
+  <div class="filters" style="margin-bottom:12px">
+    <label class="chk"><input type="checkbox" id="gSim" checked>논리 프로필 유사(점선)</label>
+    <label class="chk"><input type="checkbox" id="gLogic" checked>풀이 논리 연결</label>
+    <label class="chk"><input type="checkbox" id="gMat" checked>소재 연결</label>
+  </div>
+  <div class="graphbox"><svg id="gsvg" role="img" aria-label="학교 간 연관 그래프"></svg><aside class="side" id="gside"><h3>학교를 눌러 보세요</h3><p class="note">결론: 학교 간에 문제를 그대로 가져다 쓴 정황은 없었어요. 풀이 논리까지 같은 강한 연결은 숙명여대 2018 ← 부산대 2017 모의(차분몫 조임) 하나뿐이고, 같은 학교 안에서 예전 소재를 다시 쓰는 경향이 훨씬 강해요.</p></aside></div>
+</section>
+
+<section id="v-scores" hidden>
+  <h2>합격자 논술 점수</h2>
+  <p class="lede">대학이 직접 공개한 입시결과만 모았어요(입학처 자료, 대학 공개를 인용한 언론). 학교마다 만점과 지표(평균, 70%컷 등)가 달라서 같은 열끼리만 비교해야 해요. 막대는 값 ÷ 만점이에요.</p>
+  <div class="filters">
+    <label>학교<select id="ss"><option value="">공개한 학교 전체</option></select></label>
+    <label>학년도<select id="sy"><option value="">전체</option></select></label>
+    <label class="grow">모집단위·지표 검색<input type="search" id="sq" placeholder="예: 의예, 약학, 평균, 70%"></label>
+    <label class="chk"><input type="checkbox" id="smed">의약계열만</label>
+  </div>
+  <div class="summary"><span><strong id="scnt">0</strong>기록</span></div>
+  <div class="tbl"><table><thead><tr><th>학교</th><th>학년도</th><th>모집단위</th><th>지표</th><th style="text-align:right">값 / 만점</th><th>기타</th><th>출처</th></tr></thead><tbody id="stbody"></tbody></table></div>
+  <div class="more"><button class="btn" type="button" id="smore" hidden>더 보기</button></div>
+  <p class="note">점수를 공개하지 않는 곳: 연세, 고려, 이화, 가톨릭, 연세 미래, 홍익, 동덕, 고려 세종, 홍익 세종, 서울여대, 경기(자연). 성균관은 입학처 접속이 막혀 확인하지 못했어요.</p>
+</section>
+
+<section id="v-overview" hidden>
+  <h2>종합·현황</h2>
+  <p class="lede">전국 수리논술 경향, 생명논술 종합, 시행 현황표예요.</p>
+  <div class="subtabs" id="osub"></div>
+  <div id="obody"></div>
+</section>
+
+</div></main>
+
+<div class="solve" id="solve" hidden role="dialog" aria-modal="true" aria-labelledby="svTitle">
+  <div class="bar">
+    <button class="btn" type="button" id="svClose">← 목록</button>
+    <div class="ttl" id="svTitle"></div>
+    <div class="row">
+      <button class="btn" type="button" id="svPrev" title="이전 문항 (←)">이전</button>
+      <button class="btn" type="button" id="svNext" title="다음 문항 (→)">다음</button>
+    </div>
+  </div>
+  <div class="body"><div class="cols">
+    <div class="pages" id="svPages"></div>
+    <aside class="panel">
+      <div class="box"><h4>타이머</h4>
+        <div class="row" style="align-items:center;justify-content:space-between"><span class="timer" id="svTime">00:00</span>
+        <span class="row"><button class="btn" type="button" id="svTStart">시작</button><button class="btn" type="button" id="svTReset">초기화</button></span></div></div>
+      <div class="box"><h4>내 기록</h4>
+        <div class="row" id="svStatus">
+          <button class="btn" type="button" data-st="done" aria-pressed="false">풀었음</button>
+          <button class="btn" type="button" data-st="again" aria-pressed="false">다시 볼 것</button>
+          <button class="btn" type="button" data-st="wrong" aria-pressed="false">틀림</button>
+        </div>
+        <label for="svMemo" class="srcline" style="display:block;margin:10px 0 4px">메모 (이 기기에만 저장)</label>
+        <textarea id="svMemo" placeholder="답, 막힌 곳, 다시 볼 포인트"></textarea>
+      </div>
+      <div class="box"><h4>풀이 힌트</h4>
+        <button class="btn" type="button" id="svHintBtn">힌트 보기</button>
+        <div class="reveal" id="svHint" hidden></div></div>
+      <div class="box"><h4>예시답안·해설</h4>
+        <button class="btn" type="button" id="svAnsBtn">예시답안 보기</button>
+        <div class="reveal" id="svAnsNote" hidden></div></div>
+      <div class="box"><h4>보기 설정</h4>
+        <div class="row"><button class="btn" type="button" id="svZoom" aria-pressed="false">크게 보기</button><button class="btn" type="button" id="svWhite" aria-pressed="false">흰 종이로 보기</button><button class="btn" type="button" id="svOrig" aria-pressed="false">원본 쪽 보기(그림 확인)</button></div>
+        <p class="srcline" id="svSrc" style="margin:10px 0 0"></p></div>
+    </aside>
+  </div></div>
+</div>
+
+<footer><div class="wrap">각 대학의 선행학습 영향평가 보고서(문항카드), 입학처 자료집·입시결과를 바탕으로 정리했어요. “(추정)”이 붙은 부분과 예측은 기출 분석에서 나온 판단이고, 대학의 공식 정답이나 출제 정보가 아니에요. 원본 쪽 이미지는 대학 자료(무단 복제·전재 금지)라 개인 공부용으로만 쓰고 링크를 공유하지 마세요. 문항과 원본 쪽은 자동으로 연결해서 가끔 다른 쪽이 열릴 수 있어요. 정리 기준일 2026-11-21.</div></footer>
+
+<script>window.MathJax={tex:{inlineMath:[["\\(","\\)"]],displayMath:[["\\[","\\]"]]},svg:{fontCache:"global"},startup:{typeset:false}};</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg-full.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script>
+(function(){
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const disp=n=>n.replace(/_/g,' ');
+let META,ITEMS,SCORES,ORIG={},PIDX={},TPIDX={},TR='all';
+const tpacks={};
+function getTPack(c){if(!tpacks[c])tpacks[c]=fetch('txt/'+c+'.json').then(r=>r.ok?r.json():{}).catch(()=>({}));return tpacks[c]}
+const ST_LAB={done:'풀었음',again:'다시 볼 것',wrong:'틀림'};
+const rec={get(id){try{return JSON.parse(localStorage.getItem('rec:'+id)||'{}')}catch(e){return {}}},set(id,v){try{localStorage.setItem('rec:'+id,JSON.stringify(v))}catch(e){}}};
+const packs={};
+function getPack(c){if(!packs[c])packs[c]=fetch('img/'+c+'.json').then(r=>r.ok?r.json():{}).catch(()=>({}));return packs[c]}
+const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+const docCache={};
+async function getDoc(f){if(!docCache[f]){const r=await fetch('docs/'+f+'.md');docCache[f]=r.ok?await r.text():'문서를 불러오지 못했어요.'}return docCache[f]}
+function md(t){const h=DOMPurify.sanitize(marked.parse(t));const d=document.createElement('div');d.innerHTML=h;d.querySelectorAll('table').forEach(tb=>{const w=document.createElement('div');w.className='tw';tb.replaceWith(w);w.appendChild(tb)});
+  const kids=[...d.childNodes];if(kids.filter(n=>n.tagName==='H2').length<2)return d.innerHTML;
+  const out=document.createElement('div');let cur=null,first=true;
+  for(const n of kids){if(n.tagName==='H2'){cur=document.createElement('details');cur.className='sec';if(first){cur.open=true;first=false}const sm=document.createElement('summary');const tt=document.createElement('span');tt.textContent=n.textContent;sm.appendChild(tt);cur.appendChild(sm);out.appendChild(cur);continue}
+    (cur||out).appendChild(n)}
+  out.querySelectorAll('details.sec').forEach(dt=>{let c=0;[...dt.childNodes].slice(1).forEach(n=>c+=(n.textContent||'').replace(/\s/g,'').length);const sp=document.createElement('span');sp.className='n';sp.textContent=c.toLocaleString()+'자';dt.firstChild.appendChild(sp)});
+  return out.innerHTML}
+const trOK=i=>TR==='all'||(TR==='수리'?i.tr.startsWith('수리'):i.tr.includes('생명'));
+const trPill=i=>i.tr==='생명'?'<span class="pill bio">생명</span>':i.tr.startsWith('수리')?'<span class="pill math">'+esc(i.subj)+'</span>':'<span class="pill">'+esc(i.subj)+'</span>';
+
+/* ---------- items ---------- */
+let shown=60, filtered=[];
+const TAGDEF={"I-SUB": ["적분", "치환적분", "적분 속에서 g(x)와 그 도함수 g′(x)를 찾아 t=g(x)로 바꾼다. 적분 구간도 t의 범위로 함께 바꾼다."], "I-PART": ["적분", "부분적분", "∫f·g′ = f·g − ∫f′·g. 다항식×지수·로그·삼각처럼 곱 꼴일 때, 미분하면 단순해지는 쪽을 f로 둔다."], "I-PART-CYC": ["적분", "부분적분 순환", "e^x·sin x처럼 부분적분을 두 번 하면 처음 적분이 다시 나오는 꼴. 처음 적분을 I로 놓고 I에 대한 방정식으로 푼다."], "I-REC": ["적분", "적분 점화식", "Iₙ=∫xⁿeˣdx처럼 n이 붙은 적분에 부분적분을 해서 Iₙ과 Iₙ₋₁(또는 Iₙ₋₂)의 관계식을 만든다."], "I-SYM-ODD": ["적분", "우함수·기함수 적분", "구간 [−a, a]에서 기함수의 적분은 0, 우함수의 적분은 2∫₀ᵃ로 줄인다."], "I-SYM-REFL": ["적분", "x → a+b−x 치환", "∫ₐᵇf(x)dx에서 x를 a+b−x로 바꾼 식을 원래 식과 더해, 직접 못 푸는 적분을 쉬운 적분으로 만든다."], "I-SYM-INV": ["적분", "역함수 적분(넓이)", "f와 역함수의 그래프가 y=x에 대칭인 것을 써서, 역함수의 적분을 '직사각형 넓이 − f의 적분'으로 바꾼다."], "I-SYM-PER": ["적분", "주기함수 적분", "주기가 p인 함수는 길이 p 구간의 적분값이 어디서 시작하든 같다. 이것으로 구간을 옮기거나 묶는다."], "I-TRANS": ["적분", "적분 가능한 꼴로 변형", "부분분수, 삼각항등식, 분자를 분모의 도함수로 맞추기 등으로 아는 적분 꼴로 바꾼다."], "I-CANCEL": ["적분", "적분 항 소거·결합", "따로는 못 구하는 두 적분을 더하거나 빼서 없앤다. (fg)′=f′g+fg′처럼 합이 어떤 식의 도함수임을 알아채는 것이 핵심."], "I-FTC": ["적분", "정적분으로 정의된 함수", "F(x)=∫ₐˣf(t)dt를 미분하면 f(x)(미적분의 기본정리). x=a를 넣으면 0이 되는 것도 함께 쓴다."], "I-ABS": ["적분", "절댓값 적분", "절댓값 안이 0이 되는 점에서 구간을 나눠 부호를 정한 뒤 적분한다."], "I-RIEMANN": ["적분", "정적분과 급수", "lim Σ f(k/n)·(1/n)을 ∫₀¹f(x)dx로 바꾼다(구분구적법). 합 ↔ 적분을 오간다."], "I-INEQ": ["적분", "적분 부등식", "함수끼리의 대소를 적분하거나, 넓이를 직사각형·사다리꼴과 비교해 적분값이나 합의 범위를 잡는다."], "I-AREA-GEO": ["적분", "넓이를 도형으로", "원·직선으로 둘러싸인 영역의 적분을 삼각형·부채꼴 넓이로 대신 계산한다."], "I-VOL": ["적분", "입체 부피", "단면의 넓이 S(x)를 구해 ∫S(x)dx로 부피를 구한다."], "I-PARAM": ["적분", "곡선 길이·속도 적분", "매개변수 곡선의 길이 ∫√(x′²+y′²)dt, 속력의 적분으로 움직인 거리를 구한다."], "NEW:AREA": ["적분", "정적분으로 넓이", "교점을 구하고 (위 함수 − 아래 함수)를 적분해 넓이를 식으로 만든다."], "NEW:AREA-BETWEEN": ["적분", "두 넓이가 같다(비가 주어짐)", "나뉜 두 넓이가 같으면 부호 있는 정적분이 0. 비가 주어지면 두 넓이를 같은 변수로 써서 방정식을 세운다."], "NEW:AREA-1/6": ["적분", "포물선 넓이 공식", "포물선과 직선(두 근 α, β) 사이 넓이 = |a|(β−α)³/6. 적분을 생략한다."], "NEW:AREA-RATIO": ["적분", "넓이의 비", "넓이들을 공통 변수로 나타내 비를 식으로 세운다."], "NEW:ANTIDERIV": ["적분", "부정적분으로 함수 복원", "f′(또는 속도·가속도)을 적분하고 주어진 값으로 적분상수를 정한다."], "NEW:INT-CONST": ["적분", "정적분을 상수로 놓기", "식 속의 ∫ₐᵇf(t)dt는 상수이므로 k로 놓고, 식을 다시 적분해 k에 대한 방정식을 푼다."], "NEW:PIECE-INT": ["적분", "구간별 적분", "식이 바뀌는 점에서 구간을 나눠 각각 적분하고, 연속·미분가능 조건으로 이어 붙인다."], "NEW:곡선길이": ["적분", "곡선의 길이", "∫√(1+f′(x)²)dx 또는 매개변수 공식으로 곡선의 길이를 구한다."], "NEW:KIN": ["적분", "위치·속도·거리", "속도의 적분은 위치 변화, |속도|의 적분은 움직인 거리. 두 점이 만나는 조건은 위치가 같음."], "D-MVT": ["미분", "평균값정리", "(f(b)−f(a))/(b−a)=f′(c)인 c가 있다. 함숫값의 차를 도함수로 바꿔 부등식이나 근의 존재를 보인다."], "D-IVT": ["미분", "사잇값정리", "연속함수에서 f(a)·f(b)<0이면 (a, b)에 근이 있다. 해가 '있음'을 보일 때 쓴다."], "D-ROLLE": ["미분", "롤의 정리", "f(a)=f(b)이면 f′(c)=0인 c가 있다. 보조함수를 만들어 도함수의 근이 있음을 보인다."], "D-SIGN": ["미분", "도함수 부호로 증감·극값", "f′의 부호 변화를 표로 정리해 증가·감소 구간과 극대·극소를 정한다."], "D-CHAIN": ["미분", "합성함수 미분", "(f(g(x)))′ = f′(g(x))·g′(x)."], "D-INV": ["미분", "역함수 미분", "g가 f의 역함수이고 b=f(a)이면 g′(b)=1/f′(a)."], "D-IMP": ["미분", "음함수 미분", "x, y의 관계식을 그대로 x로 미분해 dy/dx를 구한다."], "D-DIFFABLE": ["미분", "미분가능 조건", "경계점에서 ① 연속(함숫값 일치) ② 좌·우 미분계수 일치를 둘 다 세워 미지수를 정한다."], "D-TANGENT-CNT": ["미분", "접선 개수 → 실근 개수", "접점을 t로 놓고 접선이 주어진 점을 지나는 조건을 t의 방정식으로 만든다. 접선 개수 = 그 방정식의 실근 개수."], "D-ROOT-CNT": ["미분", "상수분리로 실근 개수", "방정식을 g(x)=k 꼴로 바꿔 y=g(x)와 직선 y=k의 교점 수로 실근 개수를 센다."], "D-CONVEX": ["미분", "볼록성·변곡점", "이계도함수 부호로 위·아래 볼록을 정하고, 곡선이 접선·할선의 위/아래에 있다는 것으로 부등식을 만든다."], "D-OPT": ["미분", "최대·최소 비교", "닫힌 구간에서 임계점의 값과 양 끝값을 모두 비교해 최대·최소를 정한다."], "D-MULT": ["미분", "중근 = 접함", "곡선과 직선이 x=a에서 접함 ⇔ 두 식의 차가 (x−a)²을 인수로 가짐. 인수 꼴로 식을 놓는다."], "D-COMMON-TAN": ["미분", "공통접선", "두 곡선의 접점에서 '함숫값이 같다'와 '기울기가 같다' 두 식을 세운다."], "D-GRAPH-TRANS": ["미분", "그래프 이동으로 단순화", "평행·대칭이동으로 식을 단순한 꼴로 옮겨 분석한 뒤 되돌린다."], "D-NEWDEF": ["미분", "새로 정의된 함수 개형", "최댓값 함수, 극한으로 정의된 함수, 교점 개수 함수처럼 문제에서 새로 정의한 함수의 개형을 경우별로 그린다."], "NEW:TANGENT": ["미분", "접선의 방정식", "접점 (t, f(t))에서 y=f′(t)(x−t)+f(t)로 놓고 조건을 대입해 t를 구한다."], "NEW:NORMAL-LINE": ["미분", "법선", "접선에 수직인 직선(기울기 −1/f′(t))을 쓴다. 법선이 원의 중심을 지나는 성질 등."], "NEW:PROD-RULE": ["미분", "곱의 미분", "(fg)′ = f′g + fg′. 극한 조건에서 f, g의 값과 미분계수를 따로 구해 넣는다."], "NEW:DIFF-FN": ["미분", "차함수 h = f − g", "두 함수의 대소·교점·간격 문제를 h=f−g 하나의 증감·최솟값 문제로 바꾼다."], "NEW:MONO": ["미분", "단조성(증가·감소)", "증가함수 ⇔ f′≥0 같은 조건을 쓰거나, 단조이므로 일대일·해가 하나임을 판정한다."], "NEW:MONO-ENDPOINT": ["미분", "단조함수는 끝점에서 최대·최소", "구간에서 증가(감소)하면 최댓값·최솟값은 양 끝점에서 나온다."], "NEW:DIST2-DERIV": ["미분", "거리 제곱 미분", "거리² 함수를 미분해 최소점을 찾는다. 그 점에서 접선 ⊥ 두 점을 잇는 선분."], "NEW:ENVELOPE": ["미분", "접선족·접점의 자취", "매개변수에 따라 움직이는 직선이 늘 접하는 곡선이나, 접점이 그리는 자취를 구한다."], "NEW:최대최소정리": ["미분", "최대·최소 정리 활용", "연속함수의 최대·최소 정리, 극값 조건(도함수=0)으로 최적 조건이나 존재를 끌어낸다."], "L-SQUEEZE": ["극한·연속", "샌드위치 정리", "같은 극한을 갖는 두 식으로 위아래를 감싸 극한을 구한다."], "L-RATIONAL": ["극한·연속", "유리화·최고차항", "√ 꼴은 유리화, 분수 꼴은 분모의 최고차항으로 나눠 ∞/∞, ∞−∞ 꼴을 처리한다."], "L-DEF": ["극한·연속", "미분계수 정의로 극한", "lim (f(a+h)−f(a))/h 꼴을 찾아 f′(a)로 바꾼다."], "L-GEOM": ["극한·연속", "등비급수(도형 반복)", "도형이 일정한 비율로 반복되면 첫째항과 공비를 찾아 a/(1−r)로 합한다."], "L-TELE": ["극한·연속", "망원합", "부분분수 등으로 각 항을 aₖ−aₖ₊₁ 꼴로 바꿔 중간 항을 지운다."], "L-EXP": ["극한·연속", "e의 정의", "lim(1+1/n)ⁿ=e, lim(eˣ−1)/x=1, lim ln(1+x)/x=1 꼴로 맞춘다."], "L-ASYM": ["극한·연속", "주요항 비교", "가장 빨리 커지는(주된) 항만 남겨 근사하고 나머지가 0으로 감을 보인다."], "NEW:LIM-ZERO": ["극한·연속", "0/0 극한 조건", "극한값이 있고 분모 → 0이면 분자 → 0. 이것으로 값이나 인수 (x−a)를 정한다."], "NEW:LIM-ALG": ["극한·연속", "극한 성질로 분해", "식을 이미 아는 극한들의 합·곱으로 쪼개 계산한다."], "NEW:CONT": ["극한·연속", "연속 조건으로 인수·경우 결정", "곱이나 합성으로 만든 함수가 연속이려면 불연속점에서 무엇이 0이어야 하는지 따져 인수나 경우를 정한다."], "NEW:CONT-JOIN": ["극한·연속", "경계점 연속", "경계점에서 좌극한 = 우극한 = 함숫값을 세워 미지수를 정한다."], "NEW:COMPOSE": ["극한·연속", "합성함수의 극한·연속", "안쪽 함수가 어떤 값을 갖는지(불연속점을 지나는지) 따져 합성함수의 극한·연속을 판정한다."], "S-IND": ["수열", "수학적 귀납법", "n=1에서 성립, n=k에서 성립하면 n=k+1에서도 성립함을 보인다."], "S-REC": ["수열", "점화식 세우기", "n번째 상황과 n+1번째 상황의 관계를 식으로 세운다."], "S-CHAR": ["수열", "점화식 풀기", "aₙ₊₁=paₙ+q를 (aₙ₊₁−α)=p(aₙ−α) 등비 꼴로 바꾸는 식으로 점화식을 일반항으로 푼다."], "S-SUMFORM": ["수열", "합 공식·Sₙ 관계", "Σk, Σk² 공식과 aₙ=Sₙ−Sₙ₋₁로 일반항과 합을 구한다."], "S-PERIOD": ["수열", "수열의 주기성", "항을 몇 개 직접 써서 반복 주기를 찾고, 나머지로 원하는 항을 정한다."], "S-BOUND": ["수열", "단조·유계로 수렴", "증가하고 위로 유계(또는 감소하고 아래로 유계)임을 보여 수렴을 판정한다."], "NEW:AP-GP": ["수열", "등차·등비수열 조건", "일반항·합 공식, 등차중항·등비중항으로 조건을 식으로 세운다."], "NEW:SEQ-BASIC": ["수열", "수열 기본 계산", "일반항·합의 부호가 바뀌는 곳, 공차·공비가 정수인 조건 등을 정리한다."], "NEW:GEO-SUM": ["수열", "등비수열의 합", "반복되는 양이 일정한 비율로 변하면 등비수열 합 공식으로 더한다."], "NEW:SEQ-LIST": ["수열", "항을 차례로 나열", "점화식대로 항을 직접 계산해 규칙이나 값을 찾는다."], "NEW:SEQ-PARITY": ["수열", "홀수·짝수 번째 항 나누기", "홀수 번째와 짝수 번째 항을 따로 묶어 일반항이나 합을 구한다."], "NEW:FN-REPEAT": ["수열", "반복되는 그래프", "구간마다 같은 모양이 반복(확대·축소)되는 함수를 구간별 규칙(수열)로 정리한다."], "NEW:COEF": ["함수·식", "꼴 놓고 계수 결정", "조건으로 함수를 미지 계수가 있는 꼴(예: 우함수면 짝수차 항만)로 놓고 조건을 대입해 계수를 정한다."], "NEW:FACTOR": ["함수·식", "근·조건에서 인수 결정", "f(a)=0이면 (x−a)가 인수. 근, 극한, 연속 조건에서 인수를 읽어 식을 놓는다."], "NEW:DEGREE": ["함수·식", "차수 비교", "양변의 최고차항 차수·계수를 비교해 다항함수의 차수와 식을 정한다."], "NEW:IDENTITY-COEF": ["함수·식", "항등식 계수 비교", "모든 x(또는 n)에서 성립하므로 양변의 같은 차수 계수가 같다."], "NEW:나머지정리": ["함수·식", "나머지정리", "f(x)를 (x−a)로 나눈 나머지는 f(a). 항등식 조건으로 계수를 정한다."], "NEW:SPECIAL-VAL": ["함수·식", "특수값 대입", "x=0, 1처럼 계산이 쉬운 값을 넣어 상수나 관계를 얻는다."], "NEW:SUBST-VALUE": ["함수·식", "값 대입·치환 계산", "조건식에 값을 넣거나 t=1/h처럼 치환해 미지수나 극한을 계산한다."], "NEW:FUNC-EQ": ["함수·식", "함수방정식", "f(x+y)=f(x)+f(y) 같은 식에 특수값을 넣고, 도함수 정의와 엮어 f를 결정한다."], "NEW:EVEN-FN": ["함수·식", "우함수·기함수 성질", "그래프가 y축(원점) 대칭이면 짝수(홀수)차 항만 남는 꼴로 놓거나, 대칭으로 항을 지운다."], "NEW:GRAPH-SYM": ["함수·식", "그래프 대칭", "대칭축·대칭점에서 교점 좌표의 합이나 함숫값 사이 관계를 얻는다."], "NEW:INV-FN": ["함수·식", "역함수 값 대응", "g=f⁻¹이면 g(b)=a ⇔ f(a)=b. 역함수 값을 원래 함수의 방정식으로 바꾼다."], "NEW:INV-YX": ["함수·식", "역함수와 y=x 대칭", "f와 f⁻¹의 그래프가 y=x에 대칭인 것으로 교점을 y=x 위에서 찾거나 점 (a, b) ↔ (b, a)를 맞바꾼다."], "NEW:FIXED-POINT": ["함수·식", "f(f(x))=x 같은 방정식", "f(x)=x의 해와 그 밖의 해로 나눠 해의 개수를 센다."], "NEW:SYS-EQ": ["함수·식", "연립방정식", "조건마다 미지수에 대한 식을 세워 연립해서 푼다."], "NEW:ALG-ID": ["함수·식", "곱셈공식·항등식 변형", "(s+c)²=1+2sc, 세제곱 합 공식 등 대수 항등식으로 식을 정리한다."], "NEW:QUAD-SUB": ["함수·식", "치환 후 이차함수 최대·최소", "t=sin x, t=log x 등으로 치환해 '범위가 정해진 이차함수'의 최대·최소로 바꾼다."], "NEW:QUAD-MAXMIN": ["함수·식", "이차함수 최대·최소", "꼭짓점이 구간 안인지 밖인지 비교해 최대·최소를 정한다."], "NEW:QUAD-INEQ": ["함수·식", "이차부등식", "조건을 이차부등식으로 바꿔 범위를 구한다."], "NEW:SUB-T": ["함수·식", "한 문자로 치환", "t=tanθ, t=log x처럼 반복되는 식을 한 문자로 놓아 방정식을 단순하게 만든다."], "NEW:SIGN-QUAD": ["함수·식", "부호·사분면으로 해 고르기", "각이 몇 사분면인지, 식의 부호가 무엇인지로 여러 해 중 맞는 것을 고른다."], "NEW:ABS-CASE": ["함수·식", "절댓값 경우 나누기", "절댓값 안의 부호로 경우를 나눠 식을 푼다."], "NEW:PERIOD-COND": ["함수·식", "주기함수 조건", "f(x+p)=f(x)로 값을 한 주기 안으로 옮기고, 경계 조건과 함께 계수를 정한다."], "NEW:LINEAR-MAP": ["함수·식", "일차변환·회전변환", "점이나 도형의 이동을 행렬·회전변환으로 계산해 상(像)이나 자취를 구한다."], "NEW:DIVISOR": ["함수·식", "약수·배수 조건", "정수 조건을 약수·배수 관계로 바꿔 경우를 센다."], "NEW:PRIME-FACTOR": ["함수·식", "소인수분해", "소인수의 지수로 값을 정리하거나 경우를 센다."], "NEW:EXP-COMPARE": ["함수·식", "같은 밑으로 지수 비교", "같은 밑의 거듭제곱으로 바꿔 지수끼리 비교·분류한다."], "NEW:RADICAL": ["함수·식", "거듭제곱근 정리", "거듭제곱근의 성질로 식을 정리한다."], "NEW:ROOT-N": ["함수·식", "n제곱근의 개수", "a의 부호와 n의 홀짝으로 실수인 n제곱근의 개수를 나눈다."], "NEW:INT-COND": ["함수·식", "정수·자연수 조건", "답이 정수(자연수)여야 한다는 조건으로 후보를 좁힌다."], "NEW:공식유도": ["함수·식", "공식을 직접 유도", "점과 직선 사이 거리 공식처럼 교과서 공식을 직접 증명·유도한다."], "NEW:EXP-LOG": ["지수·로그", "지수·로그 방정식·부등식", "지수·로그 식을 정리해 방정식·부등식을 풀고 정수 조건을 따진다."], "NEW:EXP-RULE": ["지수·로그", "지수 ↔ 로그 바꾸기", "aˣ=b ⇔ x=logₐb로 바꿔 연립하거나 계산한다."], "NEW:EXP-GRAPH": ["지수·로그", "지수·로그 그래프", "점근선, 축과의 교점, y=x 대칭을 그래프에서 읽어 좌표나 넓이를 구한다."], "NEW:LOG-RULE": ["지수·로그", "로그의 성질", "로그의 합은 곱으로, 밑 변환, logₐb·log_ba=1 등으로 식을 묶거나 지운다."], "NEW:LOG-BASE": ["지수·로그", "밑 통일·a^(logₐx)=x", "밑을 하나로 통일하거나 a^(logₐx)=x로 식을 단순하게 만든다."], "NEW:LOG-COND": ["지수·로그", "밑·진수 조건", "진수>0, 밑>0이고 밑≠1인 조건으로 x의 범위를 먼저 정한다."], "NEW:LOG-MONO": ["지수·로그", "밑에 따른 증가·감소", "밑>1이면 증가, 0<밑<1이면 감소. 부등호 방향과 최대·최소 위치가 바뀐다."], "NEW:TRIG-ID": ["삼각함수", "삼각 항등식", "sin²+cos²=1, tan=sin/cos 등으로 한 종류의 함수로 통일한다."], "NEW:TRIG-EQ": ["삼각함수", "삼각방정식", "단위원이나 그래프로 주어진 구간 안의 해를 빠짐없이 찾는다."], "NEW:TRIG-INEQ": ["삼각함수", "삼각부등식", "그래프에서 부등식이 성립하는 구간을 찾는다."], "NEW:TRIG-GRAPH": ["삼각함수", "삼각함수 그래프", "주기·최댓값·최솟값·평행이동을 식에서 읽거나, 조건으로 계수를 정한다."], "NEW:TRIG-PERIOD": ["삼각함수", "주기 반복", "한 주기 안의 해·교점·넓이를 분석한 뒤 주기 수만큼 반복해 센다."], "NEW:TRIG-SYM": ["삼각함수", "삼각함수 그래프의 대칭", "대칭축·대칭점으로 해의 합이나 값을 구한다."], "NEW:TRIG-QUAD": ["삼각함수", "삼각함수 이차식", "sin²=1−cos² 등으로 한 함수에 대한 이차식으로 바꿔 범위를 따진다."], "NEW:TRIG-REDUCE": ["삼각함수", "각 변환 공식", "sin(π/2−θ)=cosθ, tan(π+θ)=tanθ 같은 공식으로 각을 바꾼다."], "NEW:TRIG-COMBINE": ["삼각함수", "삼각함수 합성", "a sinθ + b cosθ = √(a²+b²) sin(θ+α)로 합쳐 범위나 해를 구한다."], "G-COORD": ["기하·벡터", "좌표 설정", "대칭축이나 직각을 축으로 잡아 도형을 좌표로 옮겨 계산한다."], "G-PROJ": ["기하·벡터", "정사영 넓이", "정사영의 넓이 = 원래 넓이 × cosθ(θ는 두 평면이 이루는 각)."], "G-3PERP": ["기하·벡터", "삼수선 정리", "평면 밖의 점에서 내린 수선과 평면 위 직선의 수직 관계를 이어 거리·각을 구한다."], "G-VEC-DOT": ["기하·벡터", "내적", "a·b=|a||b|cosθ와 성분 계산으로 각, 길이, 수직을 다룬다."], "G-VEC-MID": ["기하·벡터", "중점으로 내적 분해", "M이 AB의 중점이면 PA·PB = |PM|² − |MA|². 내적을 거리 문제로 바꾼다."], "G-VEC-DECOMP": ["기하·벡터", "벡터 분해·일차결합", "벡터를 기준 벡터들의 일차결합으로 쓰고 계수를 비교한다."], "G-PARAM-CIRCLE": ["기하·벡터", "원 위 점을 각으로", "원 위의 점을 (r cosθ, r sinθ)로 놓아 한 변수 θ의 함수로 만든다."], "G-SIMILAR": ["기하·벡터", "닮음", "닮은 삼각형을 찾아 길이 비와 넓이 비를 세운다."], "G-TRIG-LAW": ["기하·벡터", "사인·코사인법칙", "삼각형의 변과 각 관계를 사인법칙(외접원 반지름 R 포함)과 코사인법칙으로 푼다."], "G-DISC": ["기하·벡터", "판별식으로 접함", "연립해서 나온 이차방정식의 판별식이 0이면 접한다."], "G-VIETA": ["기하·벡터", "근과 계수의 관계", "교점 좌표를 직접 구하지 않고 두 근의 합·곱으로 계산한다."], "G-CONIC-DEF": ["기하·벡터", "이차곡선의 정의", "두 초점까지 거리의 합(타원)·차(쌍곡선), 초점과 준선까지 거리가 같음(포물선)을 그대로 쓴다."], "G-REFLECT": ["기하·벡터", "대칭이동으로 최단거리", "한 점을 직선(평면)에 대해 대칭이동해 꺾인 경로를 한 직선으로 펴서 최솟값을 구한다."], "G-UNFOLD": ["기하·벡터", "전개도", "입체의 겉면을 따라가는 경로를 전개도로 펼쳐 직선 거리로 바꾼다."], "G-ADD-FORMULA": ["기하·벡터", "덧셈정리로 각 처리", "tan(α−β) 등 덧셈정리로 두 직선이 이루는 각이나 각의 합·차를 계산한다."], "NEW:DIST-PT-LINE": ["기하·벡터", "점과 직선 사이 거리", "|ax₀+by₀+c|/√(a²+b²). 원과 직선의 위치 관계(거리와 반지름 비교)에 쓴다."], "NEW:DIST-CENTER": ["기하·벡터", "중심을 지나는 거리", "원(구) 위의 점까지 거리의 최대·최소는 중심을 지나는 직선 위에서 나온다."], "NEW:TANGENT-CIRCLE": ["기하·벡터", "원의 접선", "접선 ⊥ 반지름, 접선 길이가 같음을 이용해 길이·각을 구한다."], "NEW:INSCRIBED-ANGLE": ["기하·벡터", "원주각", "지름에 대한 원주각은 직각, 같은 호에 대한 원주각은 같다. 점의 자취나 각을 정한다."], "NEW:INRADIUS": ["기하·벡터", "내접원 반지름", "접선 길이, 직각삼각형의 r=(a+b−c)/2 등으로 내접원 반지름을 구한다."], "NEW:AREA-RS": ["기하·벡터", "넓이 = r·s", "삼각형 넓이 = 내접원 반지름 × (둘레의 절반)."], "NEW:SECTION-PT": ["기하·벡터", "내분점·외분점", "내분점·외분점 좌표 공식으로 자취의 식이나 길이를 구한다."], "NEW:PARAM-ELIM": ["기하·벡터", "매개변수 소거", "매개변수를 없애 x, y 관계식을 얻고 곡선의 종류를 판정한다."], "P-CASE": ["확률·통계", "경우 나누기", "조건이 갈리는 기준을 정해 표나 트리로 빠짐·중복 없이 나눈다."], "P-COMP": ["확률·통계", "여사건", "'적어도 하나'처럼 직접 세기 어려우면 1 − P(반대 사건)으로 계산한다."], "P-BIJ": ["확률·통계", "일대일대응으로 세기", "세기 어려운 대상을 개수가 같은 다른 대상(문자열, 경로 등)으로 바꿔 센다."], "P-STARS": ["확률·통계", "중복조합 변환", "xᵢ≥k 조건을 xᵢ′=xᵢ−k로 바꿔 음이 아닌 정수해의 개수(중복조합)로 센다."], "P-INCEX": ["확률·통계", "포함배제", "n(A∪B)=n(A)+n(B)−n(A∩B)를 확장해 겹친 경우를 빼고 더한다."], "P-REC": ["확률·통계", "확률·경우의 수 점화식", "n단계의 확률(경우의 수)을 n−1단계와의 관계식으로 세운다."], "P-SYM": ["확률·통계", "대칭성", "역할이 같은 대상은 확률이 같다는 것으로 계산을 줄인다."], "P-COND": ["확률·통계", "조건부확률", "P(B|A)=P(A∩B)/P(A). 2단계 표나 베이즈 정리로 원인 쪽 확률을 구한다."], "P-LIN": ["확률·통계", "기댓값의 선형성", "E(X+Y)=E(X)+E(Y). 지시확률변수로 쪼개 각 확률을 더한다."], "P-BINOM": ["확률·통계", "이항정리·이항계수", "(a+b)ⁿ 전개와 이항계수 항등식. (1+x)ⁿ±(1−x)ⁿ으로 짝·홀 항 계수의 합을 구한다."], "P-PATH": ["확률·통계", "최단 경로 세기", "격자 위 최단 경로의 수를 같은 것이 있는 순열(조합)로 센다."], "P-DIST": ["확률·통계", "확률분포", "확률의 합=1, 평균·분산의 정의로 미지수를 정한다."], "P-NORMAL": ["확률·통계", "정규분포 표준화", "Z=(X−m)/σ로 표준화해 표준정규분포표로 확률을 구한다."], "P-CIRC": ["확률·통계", "원순열", "회전하면 같은 배열은 하나로 본다. 이웃 조건은 묶거나 사이에 끼워 넣는다."], "NEW:AM-GM": ["확률·통계", "산술·기하 평균 부등식", "a, b>0이면 a+b ≥ 2√(ab), 등호는 a=b일 때. 합이나 곱의 최솟값·최댓값을 구한다."], "A-CONTRA": ["논증", "귀류법", "결론을 부정한 가정에서 모순을 끌어낸다."], "A-CONTRAPOS": ["논증", "대우", "p → q 대신 'q가 아니면 p가 아니다'를 증명한다."], "A-EXTREME": ["논증", "극단 원리", "가장 큰(작은) 값이나 맨 끝 대상을 골라 그 성질에서 결론을 끌어낸다."], "A-INVARIANT": ["논증", "불변량·홀짝", "조작을 해도 바뀌지 않는 값(합, 홀짝 등)을 찾아 가능·불가능을 판정한다."], "A-GENERALIZE": ["논증", "일반화 후 특수값", "일반 n이나 문자로 식을 세운 뒤 주어진 값을 넣는다."], "A-CONSTRUCT": ["논증", "예시·반례 만들기", "조건을 만족하는 예나 명제를 깨는 반례를 직접 만든다."], "NEW:ARG-EVAL": ["논증", "논증 평가", "주어진 논증의 구조와 근거가 타당한지 사례로 검토한다."], "B-CONTROL": ["생명·과학", "대조군 비교", "한 변인만 다른 실험군과 대조군을 비교해 그 변인의 효과를 판단한다."], "B-PEDIGREE": ["생명·과학", "가계도·유전 판정", "형질이 나타나는 양상으로 우성·열성, 상염색체·X 염색체 연관을 판정한다."], "B-CALC": ["생명·과학", "비율·양 계산", "분리비, 농도, 비율, 양을 자료에서 계산한다."], "B-MECH": ["생명·과학", "기전 인과 사슬", "원인 → 분자·세포 수준 변화 → 결과를 단계별로 잇는다."], "B-GRAPH": ["생명·과학", "그래프·자료 해석", "축, 단위, 추세, 집단 간 차이를 읽어 결론을 끌어낸다."], "B-HYPO": ["생명·과학", "가설·실험 설계", "가설을 세우고 그것을 검증할 실험과 예상 결과를 설계한다."], "NEW:B-SEQ": ["생명·과학", "유전 정보·서열 해석", "DNA·RNA 서열, 코돈표, 돌연변이, 스플라이싱으로 단백질·형질 변화를 추론한다."], "NEW:SCI-CONCEPT": ["생명·과학", "과학 원리 설명·적용", "제시된 과학 원리를 정확히 설명하고 사례에 적용한다."], "NEW:STS-ARGUE": ["생명·과학", "과학기술·사회 논증", "과학기술의 이로움과 해로움 등 견해를 근거를 들어 논증한다."], "NEW:SCI-REACTION": ["생명·과학", "화학 반응 해석", "반응식과 전자 이동으로 현상을 설명한다."], "NEW:STOICH": ["생명·과학", "양적 관계 계산", "반응식이나 공식의 비례 관계로 양을 계산한다."]};
+const TAGALIAS={"NEW:AMGM": "NEW:AM-GM", "NEW:산술기하": "NEW:AM-GM", "NEW:AREA-INT": "NEW:AREA", "NEW:AREA-EQ": "NEW:AREA-BETWEEN", "NEW:DIFF-FUNC": "NEW:DIFF-FN", "NEW:INV-FUNC": "NEW:INV-FN", "NEW:INVERSE-ON-Y=X": "NEW:INV-YX", "NEW:PRODUCT-RULE": "NEW:PROD-RULE", "NEW:POINT-LINE-DIST": "NEW:DIST-PT-LINE", "NEW:PT-LINE-DIST": "NEW:DIST-PT-LINE", "NEW:EVEN-ODD": "NEW:EVEN-FN", "NEW:DEGREE-COMPARE": "NEW:DEGREE", "NEW:FUNC-EQ-SUBST": "NEW:FUNC-EQ", "NEW:함수방정식": "NEW:FUNC-EQ", "NEW:TANGENT-LINE": "NEW:TANGENT", "NEW:접선식": "NEW:TANGENT", "NEW:SUBST-QUAD": "NEW:QUAD-SUB", "NEW:MOTION": "NEW:KIN", "NEW:LOG-DOMAIN": "NEW:LOG-COND", "NEW:LOG-PROP": "NEW:LOG-RULE", "NEW:MONO-EXT": "NEW:MONO-ENDPOINT", "NEW:LIM-00": "NEW:LIM-ZERO", "NEW:CONT-MATCH": "NEW:CONT-JOIN", "NEW:TRIG-SYNTH": "NEW:TRIG-COMBINE", "NEW:INTERSECTION": "NEW:AREA"};
+const TAGGROUPS=["적분", "미분", "극한·연속", "수열", "함수·식", "지수·로그", "삼각함수", "기하·벡터", "확률·통계", "논증", "생명·과학"];
+const KCATS=['논술','모의논술','예시·예상문제','면접'];
+const kcat=k=>/^모의/.test(k)?'모의논술':/^면접/.test(k)?'면접':/^(예시|예상)/.test(k)?'예시·예상문제':'논술';
+function gcats(i){const g=(i.g||'').replace(/약술/g,'');
+  const med=/의예|의학|의약|의·치|의\/약|한의/.test(g)&&!/의예 아님|의약계열 없음|의학부 별도지/.test(g);
+  const ph=/약학|의약|의\/약/.test(g)&&!/약학부 미포함/.test(g);
+  const nat=!(med||ph)||/공통|공용|포함|자연[·\/]|자연Ⅰ[·+]|자연\((오전|일반|수리|공대|토)/.test(g);
+  return (med?'M':'')+(ph?'P':'')+(nat?'N':'')}
+const GCAT={M:'의대',P:'약대',N:'자연'};
+const tagName=t=>(TAGDEF[t]?TAGDEF[t][1]:t.replace(/^NEW:/,''));
+const tagDesc=t=>(TAGDEF[t]?TAGDEF[t][2]:'');
+function renderTagGuide(df){
+  const q=($('#tgQ').value||'').trim().toLowerCase();let n=0,h='';
+  for(const g of TAGGROUPS){
+    const ts=Object.keys(TAGDEF).filter(t=>TAGDEF[t][0]===g&&df[t]>=3&&(!q||(TAGDEF[t][1]+' '+TAGDEF[t][2]).toLowerCase().includes(q))).sort((a,b)=>df[b]-df[a]);
+    if(!ts.length)continue;n+=ts.length;
+    h+=`<div class="tg-grp"><h3>${esc(g)}</h3><dl>${ts.map(t=>`<dt><button type="button" data-tag="${esc(t)}" title="이 논리를 쓴 문항 보기">${esc(TAGDEF[t][1])}</button><small>${df[t]}문항</small></dt><dd>${esc(TAGDEF[t][2])}</dd>`).join('')}</dl></div>`}
+  $('#tgList').innerHTML=h||'<p style="color:var(--muted);margin:12px 0 0">찾는 태그가 없어요.</p>';
+  if(!q)$('#tgCount').textContent=n+'개';
+}
+function fillSel(sel,vals,lab){const el=$(sel);vals.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=lab?lab(v):v;el.appendChild(o)})}
+function applyItems(){
+  const gc=$('#fg').value, q=$('#q').value.trim().toLowerCase(), s=$('#fs').value, y=$('#fy').value, k=$('#fk').value, t=$('#ft').value, r=$('#fr').checked, fm=$('#fm').value, fo=$('#fo').checked;
+  const terms=q.split(/\s+/).filter(Boolean);
+  filtered=ITEMS.filter(i=>trOK(i)&&(!s||i.s===s)&&(!y||i.y===y)&&(!k||kcat(i.k)===k)&&(!gc||i._g.includes(gc))&&(!t||i.tags.includes(t))&&(!r||i.rare)&&(!fo||ORIG[i.id])&&(!fm||(fm==='none'?!rec.get(i.id).st:rec.get(i.id).st===fm))&&
+    (!terms.length||terms.every(w=>i._t.includes(w))));
+  shown=60; $('#cnt').textContent=filtered.length.toLocaleString(); drawHist(); renderCards();
+}
+function drawHist(){
+  const by={};filtered.forEach(i=>{const y=+i.y;if(y)by[y]=(by[y]||0)+1});
+  const ys=Object.keys(by).map(Number);const svg=$('#hist');
+  if(!ys.length){svg.innerHTML='';return}
+  const y0=Math.min(...ys),y1=Math.max(...ys),n=y1-y0+1,mx=Math.max(...Object.values(by));
+  const W=520,H=64,bw=(W-10)/n;let h='';
+  for(let y=y0;y<=y1;y++){const v=by[y]||0,bh=v?Math.max(2,(H-16)*v/mx):0,x=5+(y-y0)*bw;
+    h+=`<rect x="${x+1}" y="${H-12-bh}" width="${Math.max(1,bw-2)}" height="${bh}"><title>${y}학년도 ${v}문항</title></rect>`;
+    if(y===y0||y===y1||(y%5===0&&y-y0>2&&y1-y>2))h+=`<text x="${x+bw/2}" y="${H-1}" text-anchor="middle">${y}</text>`}
+  svg.innerHTML=h;
+}
+function card(i){
+  const tags=i.tags.map(t=>`<button type="button" class="tag${META.rareSet.has(t)?' rare':''}" data-tag="${esc(t)}" title="${esc(tagDesc(t)||'이 논리를 쓴 문항 보기')}">${esc(tagName(t))}</button>`).join('');
+  const st=rec.get(i.id).st,o=ORIG[i.id];
+  return `<article class="card" tabindex="0" data-i="${i.id}"><div class="hd"><b>${esc(disp(i.s))}</b><span>${esc(i.y)}</span><span class="pill${i.k!=='본'?' mock':''}">${esc(i.k)}</span>${trPill(i)}<span>${esc(i.g)}</span><span>${esc(i.q)}</span></div>
+  ${i.u?`<div class="unit">${esc(i.u)}</div>`:''}<p>${esc(i.idea)}</p>${i.key?`<div class="key">${esc(i.key)}</div>`:''}<div class="tags">${tags}</div><div class="open">${o&&o.q.length?'문제 열기 →':'요약만 있음 · 열기 →'}${st?`<span class="st ${st}">${ST_LAB[st]}</span>`:''}</div></article>`;
+}
+function renderCards(){
+  const el=$('#cards');
+  el.innerHTML=filtered.length?filtered.slice(0,shown).map(card).join(''):'<div class="empty">조건에 맞는 문항이 없어요. 검색어를 줄이거나 필터를 풀어 보세요.</div>';
+  $('#moreBtn').hidden=shown>=filtered.length;
+}
+$('#cards').addEventListener('click',e=>{const b=e.target.closest('.tag');if(!b){const c=e.target.closest('.card');if(c)openSolve(+c.dataset.i,filtered);return}const t=b.dataset.tag;$('#ft').value=t;applyItems();window.scrollTo({top:$('#v-items').offsetTop-60})});
+$('#moreBtn').onclick=()=>{shown+=60;renderCards()};
+['#q'].forEach(s=>$(s).addEventListener('input',debounce(applyItems,150)));
+['#fs','#fy','#fk','#fg','#ft','#fr','#fm','#fo'].forEach(s=>$(s).addEventListener('change',applyItems));
+$('#fh').addEventListener('change',()=>{document.body.classList.toggle('hide-hints',$('#fh').checked);store.set('hideHints',$('#fh').checked?'1':'')});
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.classList&&e.target.classList.contains('card'))e.target.click()});
+$('#reset').onclick=()=>{['#q','#fs','#fy','#fk','#fg','#ft','#fm'].forEach(s=>$(s).value='');$('#fr').checked=false;$('#fo').checked=false;applyItems()};
+function debounce(f,ms){let t;return()=>{clearTimeout(t);t=setTimeout(f,ms)}}
+
+/* ---------- schools ---------- */
+function schoolCounts(n){const c={m:0,b:0,o:0};ITEMS.forEach(i=>{if(i.s!==n)return;if(i.tr.startsWith('수리'))c.m++;else if(i.tr.includes('생명'))c.b++;else c.o++});return c}
+function renderSchoolGrid(){
+  const list=META.schools.map(s=>({...s,c:schoolCounts(s.n)})).filter(s=>TR==='all'||(TR==='수리'?s.c.m:s.c.b)).sort((a,b)=>(b.c.m+b.c.b+b.c.o)-(a.c.m+a.c.b+a.c.o));
+  $('#sgrid').innerHTML=list.map(s=>{const t=s.c.m+s.c.b+s.c.o||1;
+    return `<button type="button" class="sbtn" data-id="${s.id}"><span class="nm">${esc(disp(s.n))}</span>
+    <span class="bar2" aria-hidden="true"><i style="width:${100*s.c.m/t}%;background:var(--blue)"></i><i style="width:${100*s.c.b/t}%;background:var(--green)"></i><i style="width:${100*s.c.o/t}%;background:var(--muted)"></i></span>
+    <span class="ct">수리 ${s.c.m} · 생명 ${s.c.b}${s.c.o?' · 기타 '+s.c.o:''}${PUB.has(s.n)?' · 점수 공개':''}</span></button>`}).join('');
+}
+$('#sgrid').addEventListener('click',e=>{const b=e.target.closest('.sbtn');if(b)location.hash='s-'+b.dataset.id});
+let curSchool=null;
+function openSchool(id){
+  const s=META.schools.find(x=>x.id===id);if(!s){location.hash='schools';return}
+  curSchool=s;$('#sn').textContent=disp(s.n);
+  const c=schoolCounts(s.n),p=s.prof;
+  const sims=META.sim.filter(x=>x.a===s.n).map(x=>`${disp(x.b)} ${x.w.toFixed(2)}`).join(', ');
+  $('#sfacts').innerHTML=`<div class="fact"><b>${c.m}</b>수리 문항</div><div class="fact"><b>${c.b}</b>생명 문항</div>`+
+   (p?`<div class="fact"><b>${Math.round(p.rare*100)}%</b>드문 논리 비율</div>`:'')+(sims?`<div class="fact" style="max-width:340px"><b style="font-size:.85rem">${esc(sims)}</b>논리 프로필이 비슷한 학교</div>`:'');
+  const tabs=[...s.docs.map(d=>({k:'d:'+d.f,l:d.t===s.n||d.t===disp(s.n)?'분석·예측':d.t.replace(disp(s.n),'').replace(/^[ _]+/,'')||d.t})),
+    ...(s.year?[{k:'year',l:'연도별 연결'}]:[]),...(s.rel?[{k:'rel',l:'다른 학교와의 연관'}]:[]),{k:'items',l:'기출 목록'},...(SC_BY[s.n]?[{k:'scores',l:'합격자 점수'}]:[])];
+  tabs.forEach(t=>{if(t.l.startsWith('고려대 생명')||t.l==='생명')t.l='생명'});
+  $('#ssub').innerHTML=tabs.map((t,n)=>`<button type="button" data-k="${t.k}" aria-pressed="${n===0}">${esc(t.l)}</button>`).join('');
+  showSchoolTab(tabs[0].k);
+}
+$('#ssub').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;$$('#ssub button').forEach(x=>x.setAttribute('aria-pressed',x===b));showSchoolTab(b.dataset.k)});
+async function showSchoolTab(k){
+  const s=curSchool,el=$('#sbody');
+  if(k.startsWith('d:')||k==='rel'||k==='year'){el.innerHTML='<div class="doc"><p class="note">불러오는 중…</p></div>';const t=await getDoc(k==='rel'?s.rel:k==='year'?s.year:k.slice(2));if(curSchool!==s)return;el.innerHTML='<div class="doc">'+md(t)+'</div>';return}
+  if(k==='items'){const L=ITEMS.filter(i=>i.s===s.n&&trOK(i)).sort((a,b)=>b.y-a.y);
+    el.innerHTML=`<p class="note" style="margin:0 0 10px">${L.length}문항 · <a href="#items" id="toSearch">기출 검색에서 이 학교로 거르기</a></p><div class="cards">${L.map(card).join('')}</div>`;
+    $('#toSearch').onclick=()=>{setTimeout(()=>{$('#fs').value=s.n;applyItems()},0)};
+    el.querySelector('.cards').addEventListener('click',e=>{const b=e.target.closest('.tag');if(!b){const c=e.target.closest('.card');if(c)openSolve(+c.dataset.i,L);return}location.hash='items';setTimeout(()=>{['#q','#fs','#fy','#fk'].forEach(x=>$(x).value='');$('#ft').value=b.dataset.tag;applyItems()},0)});return}
+  if(k==='scores'){const R=SC_BY[s.n];el.innerHTML=`<div class="tbl"><table><thead><tr><th>학년도</th><th>모집단위</th><th>지표</th><th style="text-align:right">값 / 만점</th><th>기타</th></tr></thead><tbody>${R.slice().sort((a,b)=>b[1]-a[1]).map(r=>`<tr><td>${esc(r[1])}</td><td>${esc(r[3])}</td><td>${esc(r[4])}</td>${valCell(r)}<td class="src">${esc(r[7])}</td></tr>`).join('')}</tbody></table></div>`}
+}
+
+/* ---------- graph ---------- */
+let gBuilt=false;
+function buildGraph(){
+  if(gBuilt)return;gBuilt=true;
+  const svg=d3.select('#gsvg');const box=$('#gsvg').getBoundingClientRect();const W=box.width||800,H=box.height||600;
+  svg.attr('viewBox',`0 0 ${W} ${H}`);
+  svg.append('defs').html(`<marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0L10,5L0,10z" fill="context-stroke"/></marker>`);
+  const cnt={};ITEMS.forEach(i=>cnt[i.s]=(cnt[i.s]||0)+1);
+  const bio={};ITEMS.forEach(i=>{if(i.tr.includes('생명'))bio[i.s]=(bio[i.s]||0)+1});
+  const nodes=META.schools.map(s=>({id:s.n,sid:s.id,r:4+Math.sqrt(cnt[s.n]||1)*1.1,bio:(bio[s.n]||0)/(cnt[s.n]||1)}));
+  const L1=META.links.filter(l=>l.a!==l.b).map(l=>({source:l.b,target:l.a,kind:l.t==='logic'?'logic':'mat',d:l}));
+  const L2=META.sim.map(l=>({source:l.a,target:l.b,kind:'sim',w:l.w}));
+  const all=[...L2,...L1];
+  const sim=d3.forceSimulation(nodes).force('link',d3.forceLink(all).id(d=>d.id).distance(d=>d.kind==='sim'?90:70).strength(d=>d.kind==='sim'?0.15*d.w:0.4))
+    .force('charge',d3.forceManyBody().strength(-160)).force('center',d3.forceCenter(W/2,H/2)).force('col',d3.forceCollide(d=>d.r+6)).force('x',d3.forceX(W/2).strength(.04)).force('y',d3.forceY(H/2).strength(.06));
+  const g=svg.append('g');
+  svg.call(d3.zoom().scaleExtent([.4,4]).on('zoom',e=>g.attr('transform',e.transform)));
+  const css=getComputedStyle(document.documentElement);
+  const link=g.append('g').selectAll('line').data(all).join('line')
+    .attr('stroke',d=>d.kind==='logic'?'var(--blue)':d.kind==='mat'?'var(--pencil)':'var(--muted)')
+    .attr('stroke-width',d=>d.kind==='sim'?1:1.8).attr('stroke-dasharray',d=>d.kind==='sim'?'3 4':null)
+    .attr('stroke-opacity',d=>d.kind==='sim'?.45:.9).attr('marker-end',d=>d.kind==='sim'?null:'url(#ar)');
+  const node=g.append('g').selectAll('g').data(nodes).join('g').style('cursor','pointer')
+    .call(d3.drag().on('start',(e,d)=>{if(!e.active)sim.alphaTarget(.2).restart();d.fx=d.x;d.fy=d.y}).on('drag',(e,d)=>{d.fx=e.x;d.fy=e.y}).on('end',(e,d)=>{if(!e.active)sim.alphaTarget(0);d.fx=null;d.fy=null}));
+  node.append('circle').attr('r',d=>d.r).attr('fill',d=>d.bio>.3?'var(--green)':'var(--blue)').attr('fill-opacity',.85).attr('stroke','var(--sheet)').attr('stroke-width',1.5);
+  node.append('text').attr('class','lbl').attr('dy',d=>-d.r-3).attr('text-anchor','middle').text(d=>disp(d.id).replace('대학교','대').replace('여자','여'));
+  node.on('click',(e,d)=>showSide(d.id));
+  sim.on('tick',()=>{
+    link.each(function(d){const dx=d.target.x-d.source.x,dy=d.target.y-d.source.y,len=Math.hypot(dx,dy)||1,r=d.target.r+3;
+      d3.select(this).attr('x1',d.source.x).attr('y1',d.source.y).attr('x2',d.target.x-dx/len*r).attr('y2',d.target.y-dy/len*r)});
+    node.attr('transform',d=>`translate(${d.x},${d.y})`)});
+  const upd=()=>link.attr('display',d=>({sim:$('#gSim').checked,logic:$('#gLogic').checked,mat:$('#gMat').checked}[d.kind]?null:'none'));
+  ['#gSim','#gLogic','#gMat'].forEach(s=>$(s).addEventListener('change',upd));
+}
+function showSide(n){
+  const s=META.schools.find(x=>x.n===n);
+  const out=META.links.filter(l=>l.a===n),inn=META.links.filter(l=>l.b===n&&l.a!==n),self=META.links.filter(l=>l.a===n&&l.b===n);
+  const li=l=>`<li><span class="grade">${esc(l.g)}</span> ${esc(l.t==='logic'?'풀이 논리':'소재')}<br>${esc(l.c)}</li>`;
+  const sims=META.sim.filter(x=>x.a===n);
+  $('#gside').innerHTML=`<h3>${esc(disp(n))}</h3>
+   ${out.filter(l=>l.b!==n).length?`<p class="note">앞선 학교를 따른 연결</p><ul>${out.filter(l=>l.b!==n).map(l=>li({...l,c:'← '+disp(l.b)+': '+l.c})).join('')}</ul>`:''}
+   ${inn.length?`<p class="note">이 학교를 따른 학교</p><ul>${inn.map(l=>li({...l,c:'→ '+disp(l.a)+': '+l.c})).join('')}</ul>`:''}
+   ${self.length?`<p class="note">학교 안 재활용</p><ul>${self.map(li).join('')}</ul>`:''}
+   ${!out.length&&!inn.length?'<p class="note">원문 대조로 확인된 학교 간 연결은 없어요.</p>':''}
+   ${sims.length?`<p class="note">논리 프로필이 비슷한 학교: ${sims.map(x=>esc(disp(x.b))+' '+x.w.toFixed(2)).join(', ')}</p>`:''}
+   <p><a class="btn" style="text-decoration:none" href="#s-${s.id}">학교 분석 열기</a></p>`;
+}
+
+/* ---------- scores ---------- */
+let PUB=new Set(),SC_BY={},sShown=100,sFilt=[];
+const MED=/의예|의학|의과|약학|약대|치의|한의|수의|의대/;
+function valCell(r){const v=parseFloat(r[5]),m=parseFloat(r[6]);const pct=v&&m?Math.min(100,100*v/m):null;
+  return `<td class="num">${esc(r[5])}${r[6]?' / '+esc(r[6]):''}${pct!==null?`<span class="meter" aria-hidden="true"><i style="width:${pct}%"></i></span>`:''}</td>`}
+function applyScores(){
+  const s=$('#ss').value,y=$('#sy').value,q=$('#sq').value.trim().toLowerCase().split(/\s+/).filter(Boolean),med=$('#smed').checked;
+  sFilt=SCORES.filter(r=>(!s||r[0]===s)&&(!y||r[1]===y)&&(!med||MED.test(r[3]))&&(!q.length||q.every(w=>(r[3]+' '+r[4]+' '+r[2]).toLowerCase().includes(w))));
+  sShown=100;$('#scnt').textContent=sFilt.length.toLocaleString();renderScores();
+}
+function srcShort(t){const m=t.match(/https?:\/\/[^\s)]+/);return m?`<a href="${esc(m[0])}" target="_blank" rel="noopener">${esc(m[0].replace(/^https?:\/\//,'').slice(0,40))}…</a>`:esc(t.replace(/^raw\/[^/]+\//,'').slice(0,80))}
+function renderScores(){
+  $('#stbody').innerHTML=sFilt.slice(0,sShown).map(r=>`<tr><td>${esc(disp(r[0]))}</td><td>${esc(r[1])}</td><td>${esc(r[3])}<br><span class="src">${esc(r[2])}</span></td><td>${esc(r[4])}</td>${valCell(r)}<td class="src">${esc(r[7])}</td><td class="src">${esc(r[8])} · ${srcShort(r[9])}</td></tr>`).join('')||'<tr><td colspan="7" class="empty">조건에 맞는 기록이 없어요.</td></tr>';
+  $('#smore').hidden=sShown>=sFilt.length;
+}
+$('#smore').onclick=()=>{sShown+=100;renderScores()};
+['#ss','#sy','#smed'].forEach(s=>$(s).addEventListener('change',applyScores));$('#sq').addEventListener('input',debounce(applyScores,150));
+
+/* ---------- overview ---------- */
+function renderOverview(){
+  const ds=META.overall.slice().sort((a,b)=>(b.t.startsWith('종합')-a.t.startsWith('종합')));
+  const tabs=[{k:'yhead',l:'학교 안 연도별 연결 요약'},...ds.map(d=>({k:d.f,l:d.t})),{k:'rhead',l:'학교 간 연관 요약'}];
+  $('#osub').innerHTML=tabs.map((t,n)=>`<button type="button" data-k="${t.k}" aria-pressed="${n===0}">${esc(t.l)}</button>`).join('');
+  showO(tabs[0].k);
+}
+async function showO(k){$('#obody').innerHTML='<div class="doc"><p class="note">불러오는 중…</p></div>';const t=await getDoc(k);$('#obody').innerHTML='<div class="doc">'+md(t)+'</div>'}
+$('#osub').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;$$('#osub button').forEach(x=>x.setAttribute('aria-pressed',x===b));showO(b.dataset.k)});
+
+
+/* ---------- solve view ---------- */
+let svList=[],svIdx=-1,svCur=null,tStart=0,tAcc=0,tTimer=null;
+function fmtT(ms){const s=Math.floor(ms/1000);return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')}
+function tick(){$('#svTime').textContent=fmtT(tAcc+(tStart?Date.now()-tStart:0))}
+$('#svTStart').onclick=()=>{if(tStart){tAcc+=Date.now()-tStart;tStart=0;clearInterval(tTimer);$('#svTStart').textContent='계속'}else{tStart=Date.now();tTimer=setInterval(tick,500);$('#svTStart').textContent='멈춤'}tick()};
+$('#svTReset').onclick=()=>{tStart=0;tAcc=0;clearInterval(tTimer);$('#svTStart').textContent='시작';tick()};
+function mdMath(t){
+  const M=[];const put=(tex,disp)=>{M.push([tex,disp]);return '@@M'+(M.length-1)+'@@'};
+  t=t.replace(/\$\$([\s\S]+?)\$\$/g,(_,x)=>put(x.replace(/\n>\s?/g,'\n'),true)).replace(/\$([^\$\n]+?)\$/g,(_,x)=>put(x,false));
+  let h=DOMPurify.sanitize(marked.parse(t));
+  h=h.replace(/@@M(\d+)@@/g,(_,n)=>{const [x,d]=M[n];const e=x.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');return d?'\\['+e+'\\]':'\\('+e+'\\)'});
+  const w=document.createElement('div');w.innerHTML=h;w.querySelectorAll('table').forEach(tb=>{const d=document.createElement('div');d.className='tw';tb.replaceWith(d);d.appendChild(tb)});
+  w.querySelectorAll('blockquote').forEach(bq=>{const t=bq.textContent;if(/출제\s?범위|예상\s?소요|출제\s?근거|교육과정|성취\s?기준|논술고사\s?·|전형명/.test(t)&&t.length<400&&!/제시문/.test(t))bq.classList.add('meta')});
+  return w.innerHTML;
+}
+let showOrig=false;
+async function showKeys(keys,box){
+  box.innerHTML='';if(!keys.length)return;
+  const typed=keys.every(k=>TPIDX[k]);
+  if(!typed||showOrig){await pageImgs(keys,box,true);if(!typed){const n=document.createElement('p');n.className='srcline';n.style.cssText='width:100%;max-width:var(--pw,720px)';n.textContent='이 쪽은 아직 타이핑 전이라 원본 이미지로 보여요.';box.prepend(n)}return}
+  for(const k of keys){const pk=await getTPack(TPIDX[k]);const tx=(pk[k]||'').trim();if(!tx)continue;const d=document.createElement('div');d.className='typed';d.innerHTML=mdMath(tx);box.appendChild(d)}
+  if(window.MathJax&&MathJax.typesetPromise){try{await MathJax.typesetPromise([box])}catch(e){}}
+}
+async function pageImgs(keys,box,keep){
+  if(!keep)box.innerHTML='';if(!keys.length)return 0;
+  const imgs=keys.map(k=>{const im=document.createElement('img');im.alt='원본 쪽';box.appendChild(im);return [k,im]});
+  for(const [k,im] of imgs){const c=PIDX[k];const pk=c?await getPack(c):{};
+    if(pk[k])im.src='data:image/webp;base64,'+pk[k];
+    else{const d=document.createElement('div');d.className='noimg';d.textContent='이 쪽 이미지를 불러오지 못했어요.';im.replaceWith(d)}}
+  return keys.length;
+}
+function openSolve(id,list){
+  svList=list&&list.length?list:[ITEMS[id]];svIdx=svList.findIndex(i=>i.id===id);if(svIdx<0){svList=[ITEMS[id]];svIdx=0}
+  $('#solve').hidden=false;document.body.style.overflow='hidden';showSolve();$('#svClose').focus();
+}
+function closeSolve(){saveMemo();$('#solve').hidden=true;document.body.style.overflow='';renderCards();const c=document.querySelector(`.card[data-i="${svCur?svCur.id:-1}"]`);if(c)c.focus()}
+function saveMemo(){if(!svCur)return;const r=rec.get(svCur.id);r.memo=$('#svMemo').value;if(!r.memo)delete r.memo;rec.set(svCur.id,r)}
+async function showSolve(){
+  saveMemo();const i=svList[svIdx];svCur=i;const o=ORIG[i.id]||{q:[],a:[],src:''};
+  $('#svTitle').innerHTML=`${esc(disp(i.s))} ${esc(i.y)} ${esc(i.k)} · ${esc(i.q)}<small>${esc(i.g)} · ${esc(i.subj)}${svList.length>1?` · ${svIdx+1} / ${svList.length}`:''}</small>`;
+  $('#svPrev').disabled=svIdx<=0;$('#svNext').disabled=svIdx>=svList.length-1;
+  const r=rec.get(i.id);$$('#svStatus button').forEach(b=>b.setAttribute('aria-pressed',r.st===b.dataset.st));$('#svMemo').value=r.memo||'';
+  $('#svHint').hidden=true;$('#svHintBtn').textContent='힌트 보기';
+  $('#svHint').innerHTML=`${i.u?`<p class="srcline">단원: ${esc(i.u)}</p>`:''}<p style="margin:6px 0">${esc(i.idea)}</p>${i.key?`<div style="font-size:.86rem;border-left:3px solid var(--pencil);padding-left:8px">${esc(i.key)}</div>`:''}<div class="tags" style="margin-top:8px">${i.tags.map(t=>`<span class="tag" title="${esc(tagDesc(t))}">${esc(tagName(t))}</span>`).join('')}</div>`;
+  $('#svAnsNote').hidden=true;$('#svAnsBtn').disabled=!o.a.length;$('#svAnsBtn').textContent=o.a.length?'예시답안 보기':'연결된 예시답안 쪽 없음';
+  $('#svSrc').textContent='';
+  $('#solve .body').scrollTop=0;
+  tStart=0;tAcc=0;clearInterval(tTimer);$('#svTStart').textContent='시작';tick();
+  const box=$('#svPages');
+  if(o.q.length)await showKeys(o.q,box);
+  else box.innerHTML=`<div class="noimg">이 문항은 원본 쪽을 찾지 못했어요. 아래 요약으로 문제를 확인하세요.<p style="color:var(--ink);text-align:left;margin:12px 0 0">${esc(i.idea)}</p></div>`;
+}
+$('#svHintBtn').onclick=()=>{const h=$('#svHint');h.hidden=!h.hidden;$('#svHintBtn').textContent=h.hidden?'힌트 보기':'힌트 가리기'};
+$('#svAnsBtn').onclick=async()=>{const n=$('#svAnsNote');const o=ORIG[svCur.id];if(!o)return;
+  const old=document.getElementById('ansArea');
+  if(n.hidden){n.hidden=false;n.textContent='문제 아래에 예시답안 쪽을 붙였어요.';$('#svAnsBtn').textContent='예시답안 가리기';
+    const area=document.createElement('div');area.id='ansArea';area.className='pages';area.style.width='100%';
+    const sep=document.createElement('div');sep.className='srcline';sep.style.cssText='width:100%;max-width:var(--pw,720px);border-top:2px solid var(--pencil);padding-top:6px;color:var(--pencil);font-weight:600';sep.textContent='예시답안·해설';
+    const wrap=document.createElement('div');wrap.className='pages';wrap.style.width='100%';area.append(sep,wrap);$('#svPages').append(area);await showKeys(o.a,wrap);sep.scrollIntoView({behavior:'smooth'})}
+  else{n.hidden=true;$('#svAnsBtn').textContent='예시답안 보기';if(old)old.hidden=true;if(old)old.id='ansOld'}};
+$('#svStatus').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const r=rec.get(svCur.id);if(r.st===b.dataset.st)delete r.st;else r.st=b.dataset.st;rec.set(svCur.id,r);$$('#svStatus button').forEach(x=>x.setAttribute('aria-pressed',r.st===x.dataset.st))});
+$('#svMemo').addEventListener('input',debounce(saveMemo,400));
+$('#svClose').onclick=closeSolve;
+$('#svPrev').onclick=()=>{if(svIdx>0){svIdx--;showSolve()}};
+$('#svNext').onclick=()=>{if(svIdx<svList.length-1){svIdx++;showSolve()}};
+$('#svZoom').onclick=()=>{const on=$('#svZoom').getAttribute('aria-pressed')!=='true';$('#svZoom').setAttribute('aria-pressed',on);$('#svPages').style.setProperty('--pw',on?'1000px':'720px');$('.solve .cols').style.gridTemplateColumns=on?'1fr':''};
+$('#svOrig').onclick=()=>{showOrig=!showOrig;$('#svOrig').setAttribute('aria-pressed',showOrig);showSolve()};
+$('#svWhite').onclick=()=>{const on=!document.body.classList.contains('paper-white');document.body.classList.toggle('paper-white',on);$('#svWhite').setAttribute('aria-pressed',on);store.set('white',on?'1':'')};
+if(store.get('white')){document.body.classList.add('paper-white');$('#svWhite').setAttribute('aria-pressed','true')}
+document.addEventListener('keydown',e=>{if($('#solve').hidden)return;if(e.key==='Escape')closeSolve();if(e.target.tagName==='TEXTAREA')return;if(e.key==='ArrowLeft')$('#svPrev').click();if(e.key==='ArrowRight')$('#svNext').click()});
+
+/* ---------- routing ---------- */
+let overviewDone=false;
+function route(){
+  const h=location.hash.slice(1)||'items';
+  const v=h.startsWith('s-')?'school':(['items','schools','graph','scores','overview'].includes(h)?h:'items');
+  $$('main section').forEach(s=>s.hidden=s.id!=='v-'+v);
+  $$('nav.tabs a').forEach(a=>a.removeAttribute('aria-current'));
+  $$('nav.tabs a').forEach(a=>{if(a.dataset.v===(v==='school'?'schools':v))a.setAttribute('aria-current','page')});
+  if(v==='school')openSchool(h.slice(2));
+  if(v==='graph')buildGraph();
+  if(v==='overview'&&!overviewDone){overviewDone=true;renderOverview()}
+  if(v!=='items')window.scrollTo({top:0});
+}
+window.addEventListener('hashchange',route);
+$$('.seg button').forEach(b=>b.onclick=()=>{TR=b.dataset.tr;store.set('tr',TR);$$('.seg button').forEach(x=>x.setAttribute('aria-pressed',x===b));applyItems();renderSchoolGrid();if(curSchool&&!$('#v-school').hidden){const k=$('#ssub [aria-pressed="true"]')?.dataset.k;if(k==='items')showSchoolTab('items')}});
+
+Promise.all(['meta.json','items.json','scores.json'].map(f=>fetch(f).then(r=>r.json()))).then(async([m,it,sc])=>{
+  META=m;ITEMS=it;SCORES=sc;ITEMS.forEach((i,n)=>{i.id=n;i.tags=[...new Set(i.tags.map(t=>TAGALIAS[t]||t))]});
+  try{const o=await fetch('orig.json').then(r=>r.json());ORIG=o.items;PIDX=o.pages;TPIDX=o.tpages||{}}catch(e){}
+  if(store.get('hideHints')){$('#fh').checked=true;document.body.classList.add('hide-hints')}
+  const df={};ITEMS.forEach(i=>i.tags.forEach(t=>df[t]=(df[t]||0)+1));
+  META.rareSet=new Set(Object.keys(df).filter(t=>df[t]<30));
+  ITEMS.forEach(i=>i._t=(i.s+' '+i.u+' '+i.idea+' '+i.key+' '+i.subj+' '+i.g+' '+i.tags.join(' ')+' '+i.tags.map(tagName).join(' ')).toLowerCase());
+  SCORES.forEach(r=>{(SC_BY[r[0]]=SC_BY[r[0]]||[]).push(r);if(/\d/.test(r[5]))PUB.add(r[0])});
+  fillSel('#fs',META.schools.map(s=>s.n),disp);
+  fillSel('#fy',[...new Set(ITEMS.map(i=>i.y))].filter(Boolean).sort().reverse());
+  {const gn={};ITEMS.forEach(i=>{i._g=gcats(i);for(const c of i._g)gn[c]=(gn[c]||0)+1});fillSel('#fg',['M','P','N'],c=>GCAT[c]+' ('+(gn[c]||0).toLocaleString()+')')}
+  {const kc={};ITEMS.forEach(i=>{const c=kcat(i.k);kc[c]=(kc[c]||0)+1});fillSel('#fk',KCATS.filter(c=>kc[c]),c=>c+' ('+kc[c].toLocaleString()+')')}
+  {const ft=$('#ft');const used=Object.keys(df).filter(t=>df[t]>=3);
+   for(const g of [...TAGGROUPS,'기타']){const ts=used.filter(t=>(TAGDEF[t]?TAGDEF[t][0]:'기타')===g).sort((a,b)=>tagName(a).localeCompare(tagName(b),'ko'));if(!ts.length)continue;
+     const og=document.createElement('optgroup');og.label=g;ts.forEach(t=>{const o=document.createElement('option');o.value=t;o.textContent=tagName(t)+' ('+df[t]+')';og.appendChild(o)});ft.appendChild(og)}
+   renderTagGuide(df);$('#tgQ').addEventListener('input',()=>renderTagGuide(df));
+   $('#tgList').addEventListener('click',e=>{const b=e.target.closest('button[data-tag]');if(!b)return;['#q','#fs','#fy','#fk'].forEach(x=>$(x).value='');$('#ft').value=b.dataset.tag;applyItems();$('#tagGuide').open=false;$('#cnt').scrollIntoView({block:'start',behavior:'smooth'})})}
+  fillSel('#ss',[...PUB].sort(),disp);
+  fillSel('#sy',[...new Set(SCORES.map(r=>r[1]))].sort().reverse());
+  const saved=store.get('tr');if(saved&&saved!=='all'){const b=$(`.seg button[data-tr="${saved}"]`);if(b){TR=saved;$$('.seg button').forEach(x=>x.setAttribute('aria-pressed',x===b))}}
+  $('#stats').innerHTML=`<div><b>${META.schools.length}</b>학교</div><div><b>${ITEMS.length.toLocaleString()}</b>문항</div><div><b>${PUB.size}</b>점수 공개 학교</div>`;
+  applyItems();renderSchoolGrid();applyScores();route();
+}).catch(e=>{$('#cards').innerHTML='<div class="empty">데이터를 불러오지 못했어요. 새로고침해 보세요.</div>'});
+})();
+</script>
+
+</body></html>
