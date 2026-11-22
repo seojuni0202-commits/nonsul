@@ -428,6 +428,50 @@ h2{font-size:1.55rem;margin:0 0 16px;letter-spacing:-.01em}
 
 /* 수식 크기: 본문 글자와 비슷하게 조금 작게 */
 .typed mjx-container,.doc mjx-container,.cdoc mjx-container,.card mjx-container,#svHint mjx-container{font-size:90%!important}
+
+/* fmt-override */
+/* ===== 눈 피로 줄이기: 수식 크기·줄 리듬 다듬기 (근거는 fmt/report.md) — index.html의 닫는 style 태그 바로 앞에 붙인다 ===== */
+/* [수식 크기] MathJax(SVG)는 수식 소문자 높이를 본문 x-높이에 맞춘다(MathJax 문서 scale 항목). IBM Plex Sans KR은 x-높이가 0.536em으로 커서
+   수식 전각이 본문의 1.2배(90%로 줄인 뒤에도 1.08배)가 된다. 85%로 두면 수식 전각 17.1px ≈ 본문 16.8px, 숫자·대문자 높이가 본문과 같아진다.
+   수식 소문자 높이는 7.4px로, 아이패드 40cm에서 약 0.20°·PC 60cm에서 약 0.19°다. Legge·Bigelow(2011)가 말한 유창 읽기 범위(0.2°~2°)의 아래 끝이므로 이보다 더 줄이지 않는다. */
+.typed mjx-container,.doc mjx-container,.cdoc mjx-container,.card mjx-container,#svHint mjx-container{font-size:85%!important}
+/* [본문 속 수식 자리] 기준선은 MathJax가 정한 값 그대로(vertical-align:middle은 분수·첨자가 든 식을 기준선에서 최대 4~11px 어긋나게 했다). */
+.typed mjx-container:not([display="true"]),.doc mjx-container:not([display="true"]),.cdoc mjx-container:not([display="true"]),.card mjx-container:not([display="true"]){line-height:normal;vertical-align:baseline;margin:0 .1em}
+.typed table mjx-container:not([display="true"]),.doc table mjx-container:not([display="true"]){line-height:normal}
+/* [긴 본문 속 수식] 줄보다 긴 식은 문단 너비에 맞춰 줄어든다(폰 390px에서 가로 스크롤이 생기던 원인). 넘치지 않는 식의 크기는 그대로다. */
+.typed mjx-container:not([display="true"])>svg,.doc mjx-container:not([display="true"])>svg,.cdoc mjx-container:not([display="true"])>svg,.card mjx-container:not([display="true"])>svg{max-width:100%;height:auto}
+/* [따로 선 수식] 위아래 같은 간격(1em) 유지, 넘치면 그 줄만 가로로 민다(WCAG 1.4.10: 쪽 전체 가로 스크롤 금지). */
+.typed mjx-container[display="true"],.doc mjx-container[display="true"],.cdoc mjx-container[display="true"]{display:block;margin:1em 0!important;padding:.2em 0;overflow-x:auto;overflow-y:hidden;max-width:100%}
+.typed p+mjx-container[display="true"],.typed mjx-container[display="true"]+p{margin-top:.8em!important}
+/* [줄 간격] 2.0 유지: WCAG 1.4.8은 1.5 이상, 신종현·박민용(2003)은 한글 웹 문서에서 줄 사이 한 줄(100%)이 가장 빨랐다. 본문 속 분수(높이 약 2em)가 들어갈 자리이기도 하다. */
+.typed,.typed p,.typed li,.doc p,.doc li,.cdoc p,.cdoc li{line-height:2}
+/* [문단 간격] 줄 간격의 1.5배(=글자 크기 3배 간격, WCAG 1.4.8). 목록 항목 사이도 조금 띄운다. */
+.typed p,.doc p,.cdoc p{margin:0 0 1em}
+.doc li+li,.cdoc li+li,.typed li+li{margin-top:.3em}
+/* [한 줄 길이] 한글 40자 안팎(WCAG 1.4.8: CJK 40자 이하). 42em → 38em. */
+.doc p,.doc li,.cdoc p,.cdoc li{max-width:38em}
+/* [글자 크기] 분석·개념 문서 본문을 문제 화면과 같은 16.8px로(16px → 16.8px). 화면마다 크기가 달라 초점을 다시 맞추는 일을 줄이고, 수식 소문자 높이도 같아진다. */
+.doc,.cdoc{font-size:1.05rem}
+/* [글자색·바탕] 흰 바탕에 짙은 글자(양극성: Piepenbrock 외 2013). #1f2937은 대비 14.7:1로 WCAG AAA(7:1)의 두 배. */
+.typed,.doc,.cdoc{color:#1f2937}
+/* [정렬] 왼쪽 맞춤·낱말 단위 줄바꿈(WCAG 1.4.8: 양끝 맞춤 금지). */
+.typed,.doc,.cdoc{text-align:left;word-break:keep-all}
+/* [표] 분석 문서 표 글자 13.4px → 14.4px(소문자 높이 0.2° 하한), 줄 간격 1.7. */
+.doc table{font-size:.9rem}
+.typed table,.doc table{line-height:1.7}
+.doc th,.doc td{padding:6px 10px}
+/* [카드 미리보기] 13.4px → 14.4px, 줄 간격 1.75. */
+.card .pv .pvdoc{font-size:.9rem;line-height:1.75}
+.card .pv.rich{max-height:230px}
+.card p,.card .key{line-height:1.75}
+/* [폰] 좁은 화면에서 여백을 줄여 한 줄 글자 수를 지킨다. */
+@media (max-width:480px){
+  .solve .body{padding-left:max(8px,env(safe-area-inset-left,0px));padding-right:max(8px,env(safe-area-inset-right,0px))}
+  .typed{padding:16px 14px}
+  .typed .psg{padding:10px 12px}
+  .doc{padding:6px 14px 16px}
+  .cdoc{padding:16px 14px}
+}
 </style>
 
 <header class="top"><div class="wrap">
@@ -1098,10 +1142,13 @@ function metaLine(bq){
 // 본문 속 수식을 시험지처럼: lim·Σ 첨자는 아래·위로, 맨 바깥 분수는 제 크기로
 function examTeX(x){
   x=x.replace(/\\(lim|sum|prod)(?!\\limits)\s*(?=[_^])/g,'\\$1\\limits');
-  let out='',d=0;for(let i=0;i<x.length;i++){const c=x[i];
-    if(c==='{')d++;else if(c==='}')d--;
-    if(d===0&&x.startsWith('\\frac',i)&&!/[a-zA-Z]/.test(x[i+5]||'')){out+='\\dfrac';i+=4;continue}
+  let out='',d=0,pend=0;for(let i=0;i<x.length;i++){const c=x[i];
+    if(c==='{')d++;else if(c==='}'){d--;if(d===0&&pend>0){out+=c;if(--pend===0)out+='}';continue}}
+    if(d===0&&pend===0){const m=/^\\d?frac\s*(?=\{)/.exec(x.slice(i,i+8));
+      if(m){out+='{\\small\\dfrac';i+=m[0].length-1;pend=2;continue}
+      if(x.startsWith('\\frac',i)&&!/[a-zA-Z]/.test(x[i+5]||'')){out+='\\dfrac';i+=4;continue}}
     out+=c}
+  if(pend>0)out+='}';
   return out}
 function mdMath(t){
   t=t.replace(/<!--figdesc[\s\S]*?-->/g,'').replace(/!\[[^\]\n]*\]\(fig:([\w-]+)\)/g,(_,k)=>`\n\n<p class="figp"><img class="figimg" data-fig="${k}" alt="그림" loading="lazy"></p>\n\n`);
