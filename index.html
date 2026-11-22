@@ -289,6 +289,17 @@ body{word-break:keep-all;overflow-wrap:break-word}
 .ssearch input{flex:1 1 auto;max-width:440px;font:inherit;font-size:1rem;border:1px solid #d1d5db;border-radius:10px;padding:11px 14px;background:#fff}
 .ssearch input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-soft)}
 .ssearch span{font-size:.9rem;color:var(--muted)}
+/* 분석 문서 사이드바 목차 */
+.doclay{display:grid;grid-template-columns:220px minmax(0,1fr);gap:32px;align-items:start}
+.doclay .toc{position:sticky;top:64px;max-height:calc(100vh - 84px);overflow:auto;border-right:1px solid var(--line);padding:4px 12px 12px 0}
+.doclay .toc-t{font-size:.75rem;font-weight:700;color:var(--muted);letter-spacing:.06em;margin:0 0 8px}
+.doclay .toc-i{all:unset;display:block;cursor:pointer;font-size:.88rem;line-height:1.45;color:#374151;padding:6px 10px;border-radius:6px;border-left:2px solid transparent;word-break:keep-all}
+.doclay .toc-i:hover{background:var(--paper)}
+.doclay .toc-i.on{color:var(--blue);font-weight:600;border-left-color:var(--blue);background:var(--blue-soft)}
+.doclay .toc-i:focus-visible{outline:2px solid var(--blue)}
+.doclay .docbody>h2{scroll-margin-top:72px;margin-top:2em;padding-top:1em;border-top:1px solid var(--line)}
+.doclay .docbody>h2:first-of-type{margin-top:0;padding-top:0;border-top:0}
+@media (max-width:860px){.doclay{grid-template-columns:1fr;gap:12px}.doclay .toc{position:sticky;top:44px;z-index:3;background:#fff;display:flex;gap:6px;overflow-x:auto;max-height:none;border-right:0;border-bottom:1px solid var(--line);padding:8px 0}.doclay .toc-t{display:none}.doclay .toc-i{white-space:nowrap;border-left:0;border-bottom:2px solid transparent;border-radius:0;padding:6px 8px}.doclay .toc-i.on{border-bottom-color:var(--blue);background:none}}
 /* 흰 바탕·가독성 개편 */
 body{background:#fff}
 header.top{background:#fff;background-image:none}
@@ -499,11 +510,16 @@ const docCache={};
 async function getDoc(f){if(!docCache[f]){const r=await fetch('docs/'+f+'.md');docCache[f]=r.ok?await r.text():'문서를 불러오지 못했어요.'}return docCache[f]}
 function md(t){t=t.replace(/(^|[^~])~(?!~)/g,'$1\\~');t=t.replace(/\*\*(?=\S)([^*\n]*?\S)\*\*/g,'<strong>$1</strong>');const h=DOMPurify.sanitize(marked.parse(t));const d=document.createElement('div');d.innerHTML=h;d.querySelectorAll('table').forEach(tb=>{const w=document.createElement('div');w.className='tw';tb.replaceWith(w);w.appendChild(tb)});
   const kids=[...d.childNodes];if(kids.filter(n=>n.tagName==='H2').length<2)return d.innerHTML;
-  const out=document.createElement('div');let cur=null,first=true;
-  for(const n of kids){if(n.tagName==='H2'){cur=document.createElement('details');cur.className='sec';if(first){cur.open=true;first=false}const sm=document.createElement('summary');const tt=document.createElement('span');tt.textContent=n.textContent;sm.appendChild(tt);cur.appendChild(sm);out.appendChild(cur);continue}
-    (cur||out).appendChild(n)}
-  out.querySelectorAll('details.sec').forEach(dt=>{let c=0;[...dt.childNodes].slice(1).forEach(n=>c+=(n.textContent||'').replace(/\s/g,'').length);const sp=document.createElement('span');sp.className='n';sp.textContent=c.toLocaleString()+'자';dt.firstChild.appendChild(sp)});
-  return out.innerHTML}
+  // 절 목록을 왼쪽 사이드바로 (좁은 화면에서는 위쪽 가로 목록)
+  const id=()=> 'sec'+Math.random().toString(36).slice(2,8);
+  const lay=document.createElement('div');lay.className='doclay';
+  const nav=document.createElement('nav');nav.className='toc';nav.setAttribute('aria-label','목차');
+  const navT=document.createElement('div');navT.className='toc-t';navT.textContent='목차';nav.appendChild(navT);
+  const body=document.createElement('div');body.className='docbody';
+  for(const n of kids){if(n.tagName==='H2'){const sid=id();n.id=sid;const b=document.createElement('button');b.type='button';b.className='toc-i';b.dataset.target=sid;b.textContent=n.textContent;nav.appendChild(b)}body.appendChild(n)}
+  lay.append(nav,body);return lay.outerHTML}
+let tocLock=0;document.addEventListener('click',e=>{const b=e.target.closest('.toc-i');if(!b)return;const t=document.getElementById(b.dataset.target);if(!t)return;tocLock=Date.now();b.parentElement.querySelectorAll('.toc-i').forEach(x=>x.classList.toggle('on',x===b));const narrow=innerWidth<=860;const y=t.getBoundingClientRect().top+scrollY-(document.querySelector('nav.tabs')?.offsetHeight||0)-(narrow?b.parentElement.offsetHeight:0)-12;if(narrow){const nv=b.parentElement;nv.scrollLeft=b.offsetLeft-nv.clientWidth/2+b.clientWidth/2;nv.dataset.act=b.dataset.target}window.scrollTo({top:y,behavior:'smooth'})});
+window.addEventListener('scroll',()=>{if(Date.now()-tocLock<1200)return;const navs=document.querySelectorAll('.doclay .toc');navs.forEach(nav=>{if(!nav.offsetParent)return;const off=(document.querySelector('nav.tabs')?.offsetHeight||0)+(innerWidth<=860?nav.offsetHeight:0)+Math.min(260,innerHeight*0.3);let cur=null;nav.querySelectorAll('.toc-i').forEach(b=>{const t=document.getElementById(b.dataset.target);if(t&&t.getBoundingClientRect().top-off<=0)cur=b});const act=cur||nav.querySelector('.toc-i');nav.querySelectorAll('.toc-i').forEach(b=>b.classList.toggle('on',b===act));if(innerWidth<=860&&act&&nav.dataset.act!==act.dataset.target){nav.dataset.act=act.dataset.target;nav.scrollTo({left:act.offsetLeft-nav.clientWidth/2+act.clientWidth/2,behavior:'smooth'})}})},{passive:true});
 const trOK=i=>TR==='all'||(TR==='수리'?i.tr.startsWith('수리'):i.tr.includes('생명'));
 const trPill=i=>i.tr==='생명'?'<span class="pill bio">생명</span>':i.tr.startsWith('수리')?'<span class="pill math">'+esc(i.subj)+'</span>':'<span class="pill">'+esc(i.subj)+'</span>';
 
