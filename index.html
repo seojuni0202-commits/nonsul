@@ -284,6 +284,11 @@ body{word-break:keep-all;overflow-wrap:break-word}
 .cards h3.grp{grid-column:1/-1;display:flex;align-items:baseline;gap:10px;margin:18px 0 0;padding-bottom:8px;border-bottom:2px solid var(--ink);font-size:1.1rem}
 .cards h3.grp:first-child{margin-top:0}
 .cards h3.grp span{font-size:.85rem;font-weight:400;color:var(--muted)}
+/* 학교 검색 */
+.ssearch{display:flex;align-items:center;gap:12px;margin:4px 0 16px}
+.ssearch input{flex:1 1 auto;max-width:440px;font:inherit;font-size:1rem;border:1px solid #d1d5db;border-radius:10px;padding:11px 14px;background:#fff}
+.ssearch input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-soft)}
+.ssearch span{font-size:.9rem;color:var(--muted)}
 /* 흰 바탕·가독성 개편 */
 body{background:#fff}
 header.top{background:#fff;background-image:none}
@@ -385,6 +390,7 @@ h2{font-size:1.55rem;margin:0 0 16px;letter-spacing:-.01em}
   <h2>학교별 분석</h2>
   <p class="lede">학교를 고르면 그 학교의 출제 경향과 올해 예측, 매 연도가 이전 연도와 어떻게 이어지는지, 다른 학교와의 연관, 기출 목록, 합격자 점수를 한곳에서 볼 수 있어요. 막대는 수리(파랑)와 생명(초록) 문항 비율이에요.</p>
   <div class="legend"><span style="--c:var(--blue)">수리</span><span style="--c:var(--green)">생명</span><span style="--c:var(--muted)">기타</span></div>
+  <div class="ssearch"><input type="search" id="sq" placeholder="학교 이름으로 찾기 (예: 한양, 고대, 카대, 의대)" aria-label="학교 검색" autocomplete="off"><span id="scount"></span></div>
   <div class="sgrid" id="sgrid"></div>
 </section>
 
@@ -661,12 +667,21 @@ function debounce(f,ms){let t;return()=>{clearTimeout(t);t=setTimeout(f,ms)}}
 /* ---------- schools ---------- */
 function schoolCounts(n){const c={m:0,b:0,o:0};ITEMS.forEach(i=>{if(i.s!==n)return;if(i.tr.startsWith('수리'))c.m++;else if(i.tr.includes('생명'))c.b++;else c.o++});return c}
 function renderSchoolGrid(){
-  const list=META.schools.map(s=>({...s,c:schoolCounts(s.n)})).filter(s=>TR==='all'||(TR==='수리'?s.c.m:s.c.b)).sort((a,b)=>(b.c.m+b.c.b+b.c.o)-(a.c.m+a.c.b+a.c.o));
+  const q=($('#sq')?$('#sq').value:'').trim().replace(/\s+/g,'').toLowerCase();
+  const AL={'고대':'고려','연대':'연세','성대':'성균관','카대':'가톨릭','시립':'서울시립','외대':'외국어','과기대':'과학기술','이대':'이화','숙대':'숙명','부대':'부산','경북대':'경북','인하대':'인하','아주대':'아주','미래':'미래캠퍼스','세종':'세종'};
+  const qn=AL[q]||q;
+  const MED=new Set(ITEMS.filter(i=>/M/.test(i._g||'')).map(i=>i.s));
+  const hit=s=>!q||(s.n+disp(s.n)).replace(/\s+/g,'').toLowerCase().includes(qn)||((q==='의대'||q==='메디컬')&&MED.has(s.n));
+  const list=META.schools.map(s=>({...s,c:schoolCounts(s.n)})).filter(s=>(TR==='all'||(TR==='수리'?s.c.m:s.c.b))&&hit(s)).sort((a,b)=>(b.c.m+b.c.b+b.c.o)-(a.c.m+a.c.b+a.c.o));
+  if($('#scount'))$('#scount').textContent=q?list.length+'개 학교':'';
+  $('#sgrid').innerHTML=list.length?'':'<div class="empty">찾는 학교가 없어요.</div>';if(!list.length)return;
   $('#sgrid').innerHTML=list.map(s=>{const t=s.c.m+s.c.b+s.c.o||1;
     return `<button type="button" class="sbtn" data-id="${s.id}"><span class="nm">${esc(disp(s.n))}</span>
     <span class="bar2" aria-hidden="true"><i style="width:${100*s.c.m/t}%;background:var(--blue)"></i><i style="width:${100*s.c.b/t}%;background:var(--green)"></i><i style="width:${100*s.c.o/t}%;background:var(--muted)"></i></span>
     <span class="ct">수리 ${s.c.m} · 생명 ${s.c.b}${s.c.o?' · 기타 '+s.c.o:''}${PUB.has(s.n)?' · 점수 공개':''}</span></button>`}).join('');
 }
+$('#sq').addEventListener('input',()=>{renderSchoolGrid()});
+$('#sq').addEventListener('keydown',e=>{if(e.key==='Enter'){const b=$('#sgrid .sbtn');if(b)b.click()}});
 $('#sgrid').addEventListener('click',e=>{const b=e.target.closest('.sbtn');if(b)location.hash='s-'+b.dataset.id});
 let curSchool=null;
 function openSchool(id){
