@@ -300,6 +300,7 @@ body{word-break:keep-all;overflow-wrap:break-word}
 .doclay .docbody>h2{scroll-margin-top:72px;margin-top:2em;padding-top:1em;border-top:1px solid var(--line)}
 .doclay .docbody>h2:first-of-type{margin-top:0;padding-top:0;border-top:0}
 @media (max-width:860px){.doclay{grid-template-columns:1fr;gap:12px}.doclay .toc{position:sticky;top:44px;z-index:3;background:#fff;display:flex;gap:6px;overflow-x:auto;max-height:none;border-right:0;border-bottom:1px solid var(--line);padding:8px 0}.doclay .toc-t{display:none}.doclay .toc-i{white-space:nowrap;border-left:0;border-bottom:2px solid transparent;border-radius:0;padding:6px 8px}.doclay .toc-i.on{border-bottom-color:var(--blue);background:none}}
+.card .hd .sess{color:#374151;font-weight:500}.card .hd .sess sup{font-size:.62rem;color:var(--muted);margin-left:2px}
 /* 흰 바탕·가독성 개편 */
 body{background:#fff}
 header.top{background:#fff;background-image:none}
@@ -530,7 +531,15 @@ const TAGALIAS={"NEW:AMGM": "NEW:AM-GM", "NEW:산술기하": "NEW:AM-GM", "NEW:A
 const TAGGROUPS=["적분", "미분", "극한·연속", "수열", "함수·식", "지수·로그", "삼각함수", "기하·벡터", "확률·통계", "논증", "생명·과학"];
 const KCATS=['논술','모의논술','예시·예상문제','면접'];
 const kcat=k=>/^모의/.test(k)?'모의논술':/^면접/.test(k)?'면접':/^(예시|예상)/.test(k)?'예시·예상문제':'논술';
-function gcats(i){const g=(i.g||'').replace(/약술/g,'');
+let SESS={};
+const sess=i=>SESS[i.s+'|'+i.y+'|'+i.k+'|'+i.g];
+const gDisp=i=>{const x=sess(i);return x?x.l:i.g};
+const kDisp=i=>{const x=sess(i);return x&&x.kl?x.kl:i.k};
+const gTip=i=>{const x=sess(i);return x?((x.d||'')+(x.e?' (추정: 그해 시간표 원문을 찾지 못해 앞뒤 연도 구성으로 판단)':'')):''};
+function gcats(i){
+  const x=sess(i);
+  if(x){const l=x.l.replace(/\(.*\)$/,'');const med=/의대|치대|한의대/.test(l);const ph=/약대/.test(l);
+    const nat=!(med||ph)||/높공|낮공|공대|자연|간호|인문|계열|수의대|금융공학|식품영양/.test(l);return (med?'M':'')+(ph?'P':'')+(nat?'N':'')}const g=(i.g||'').replace(/약술/g,'');
   const med=/의예|의학|의약|의·치|의\/약|한의/.test(g)&&!/의예 아님|의약계열 없음|의학부 별도지/.test(g);
   const ph=/약학|의약|의\/약/.test(g)&&!/약학부 미포함/.test(g);
   const nat=!(med||ph)||/공통|공용|포함|자연[·\/]|자연Ⅰ[·+]|자연\((오전|일반|수리|공대|토)/.test(g);
@@ -638,7 +647,7 @@ function cbxSync(){CBX.forEach(c=>c.sync())}
 function card(i){
   const tags=i.tags.map(t=>`<button type="button" class="tag${META.rareSet.has(t)?' rare':''}" data-tag="${esc(t)}" title="${esc(tagDesc(t)||'이 논리를 쓴 문항 보기')}">${esc(tagName(t))}</button>`).join('');
   const st=rec.get(i.id).st,o=ORIG[i.id];
-  return `<article class="card" tabindex="0" data-i="${i.id}"><div class="hd"><b>${esc(disp(i.s))}</b><span>${esc(i.y)}</span><span class="pill${i.k!=='본'?' mock':''}">${esc(i.k)}</span>${trPill(i)}<span>${esc(i.g)}</span><span>${esc(i.q)}</span></div>
+  return `<article class="card" tabindex="0" data-i="${i.id}"><div class="hd"><b>${esc(disp(i.s))}</b><span>${esc(i.y)}</span><span class="pill${i.k!=='본'?' mock':''}">${esc(kDisp(i))}</span>${trPill(i)}<span class="sess" title="${esc(gTip(i))}">${esc(gDisp(i))}${sess(i)&&sess(i).e?'<sup>추정</sup>':''}</span><span>${esc(i.q)}</span></div>
   ${i.u?`<div class="unit">${esc(i.u)}</div>`:''}<div class="pv" data-pv="${i.id}"><p>${esc(i.idea)}</p></div>${i.key?`<div class="key">${esc(i.key)}</div>`:''}<div class="tags">${tags}</div><div class="open">${o&&o.q.length?'문제 열기 →':'요약만 있음 · 열기 →'}${st?`<span class="st ${st}">${ST_LAB[st]}</span>`:''}</div></article>`;
 }
 const yr=i=>parseInt(i.y)||0;
@@ -871,7 +880,7 @@ function closeSolve(){saveMemo();if(window.NSM&&NSM.onClose)NSM.onClose();$('#so
 function saveMemo(){if(!svCur)return;const r=rec.get(svCur.id);r.memo=$('#svMemo').value;if(!r.memo)delete r.memo;rec.set(svCur.id,r)}
 async function showSolve(){
   saveMemo();const i=svList[svIdx];svCur=i;const o=ORIG[i.id]||{q:[],a:[],src:''};
-  $('#svTitle').innerHTML=`${esc(disp(i.s))} ${esc(i.y)} ${esc(i.k)} · ${esc(i.q)}<small>${esc(i.g)} · ${esc(i.subj)}${svList.length>1?` · ${svIdx+1} / ${svList.length}`:''}</small>`;
+  $('#svTitle').innerHTML=`${esc(disp(i.s))} ${esc(i.y)} ${esc(kDisp(i))} · ${esc(i.q)}<small title="${esc(gTip(i))}">${esc(gDisp(i))} · ${esc(i.subj)}${svList.length>1?` · ${svIdx+1} / ${svList.length}`:''}</small>`;
   $('#svPrev').disabled=svIdx<=0;$('#svNext').disabled=svIdx>=svList.length-1;
   const r=rec.get(i.id);$$('#svStatus button').forEach(b=>b.setAttribute('aria-pressed',r.st===b.dataset.st));$('#svMemo').value=r.memo||'';
   $('#svHint').hidden=true;$('#svHintBtn').textContent='힌트 보기';
@@ -921,12 +930,13 @@ window.addEventListener('hashchange',route);
 $$('.seg button').forEach(b=>b.onclick=()=>{TR=b.dataset.tr;store.set('tr',TR);$$('.seg button').forEach(x=>x.setAttribute('aria-pressed',x===b));applyItems();renderSchoolGrid();if(curSchool&&!$('#v-school').hidden){const k=$('#ssub [aria-pressed="true"]')?.dataset.k;if(k==='items')showSchoolTab('items')}});
 
 Promise.all(['meta.json','items.json','scores.json'].map(f=>fetch(f).then(r=>r.json()))).then(async([m,it,sc])=>{
+  try{SESS=await fetch('sessions.json').then(r=>r.ok?r.json():{})}catch(e){SESS={}}
   META=m;ITEMS=it;SCORES=sc;ITEMS.forEach((i,n)=>{i.id=n;i.tags=[...new Set(i.tags.map(t=>TAGALIAS[t]||t))]});
   try{const o=await fetch('orig.json').then(r=>r.json());ORIG=o.items;PIDX=o.pages;TPIDX=o.tpages||{}}catch(e){}
   if(store.get('hideHints')){$('#fh').checked=true;document.body.classList.add('hide-hints')}
   const df={};ITEMS.forEach(i=>i.tags.forEach(t=>df[t]=(df[t]||0)+1));
   META.rareSet=new Set(Object.keys(df).filter(t=>df[t]<30));
-  ITEMS.forEach(i=>i._t=(i.s+' '+i.u+' '+i.idea+' '+i.key+' '+i.subj+' '+i.g+' '+i.tags.join(' ')+' '+i.tags.map(tagName).join(' ')).toLowerCase());
+  ITEMS.forEach(i=>i._t=(i.s+' '+i.u+' '+i.idea+' '+i.key+' '+i.subj+' '+i.g+' '+gDisp(i)+' '+gTip(i)+' '+i.tags.join(' ')+' '+i.tags.map(tagName).join(' ')).toLowerCase());
   SCORES.forEach(r=>{(SC_BY[r[0]]=SC_BY[r[0]]||[]).push(r);if(/\d/.test(r[5]))PUB.add(r[0])});
   fillSel('#fs',META.schools.map(s=>s.n),disp);
   fillSel('#fy',[...new Set(ITEMS.map(i=>i.y))].filter(Boolean).sort().reverse());
