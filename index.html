@@ -29,7 +29,7 @@
     if(/^[a-z]+:|^\/\//i.test(url))return realFetch(input,init);
     await window.__keyReady;
     const path=decodeURIComponent(url.replace(/^\.\//,'').split(/[?#]/)[0]);
-    const r=await realFetch('e/'+(await nameOf(path))+'.bin');
+    const r=await realFetch('e/'+(await nameOf(path))+'.bin',{cache:'no-cache'});
     if(!r.ok)return new Response('',{status:404});
     const buf=new Uint8Array(await r.arrayBuffer());
     const z=await crypto.subtle.decrypt({name:'AES-GCM',iv:buf.slice(0,12)},DK,buf.slice(12));
