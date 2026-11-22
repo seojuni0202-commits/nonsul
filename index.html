@@ -247,6 +247,17 @@ body{word-break:keep-all;overflow-wrap:break-word}
 .doc details.sec>summary h2{all:unset}
 .lede{line-height:1.7}
 
+/* 제시문 상자: 대학 시험지처럼 테두리 한 상자 안에 (가)(나)… 를 이어서 */
+.typed .psg{border:1px solid #9ca3af;border-radius:2px;padding:14px 18px;margin:.6em 0 1.4em;background:#fff}
+.typed .psg>blockquote{border:0;background:none;padding:0;margin:0;border-radius:0}
+.typed .psg>blockquote+blockquote{margin-top:1em}
+.typed .psg>blockquote p{margin:0 0 .6em}.typed .psg>blockquote p:last-child{margin-bottom:0}
+.typed .psg strong{font-weight:700}
+.typed>p,.typed>ol,.typed>ul{margin-bottom:.9em}
+.typed blockquote.meta p{margin:0 0 2px}
+/* 해설 맨 앞 출제 의도 */
+.typed .intent{margin:0 0 1.4em;padding:0 0 1.1em;border-bottom:1px solid rgba(17,24,39,.12)}
+.typed .intent h3{margin-top:0}
 /* 흰 바탕·가독성 개편 */
 body{background:#fff}
 header.top{background:#fff;background-image:none}
@@ -645,21 +656,53 @@ function fmtT(ms){const s=Math.floor(ms/1000);return String(Math.floor(s/60)).pa
 function tick(){$('#svTime').textContent=fmtT(tAcc+(tStart?Date.now()-tStart:0))}
 $('#svTStart').onclick=()=>{if(tStart){tAcc+=Date.now()-tStart;tStart=0;clearInterval(tTimer);$('#svTStart').textContent='계속'}else{tStart=Date.now();tTimer=setInterval(tick,500);$('#svTStart').textContent='멈춤'}tick()};
 $('#svTReset').onclick=()=>{tStart=0;tAcc=0;clearInterval(tTimer);$('#svTStart').textContent='시작';tick()};
+function metaLine(bq){
+  const segs=bq.textContent.trim().split(/\s+·\s+/).map(x=>x.trim()).filter(Boolean);
+  const EX=/^(\d+학년도\s*)?(수시모집\s*)?(대학별\s*)?(논술고사|(교과|일반)?\s?논술\s?(우수자|위주)?\s?전형|논술\([^)]*\)|논술)$/;
+  let ex=false;const a=[],b=[];
+  for(const x of segs){if(EX.test(x)){ex=true;continue}if(/^예상\s?소요/.test(x))b.push(x);else a.push(x)}
+  if(ex)a.unshift('논술');
+  bq.innerHTML='';const p=document.createElement('p');p.textContent=a.join(' · ');bq.appendChild(p);
+  if(b.length){const q=document.createElement('p');q.textContent=b.join(' · ');bq.appendChild(q)}
+}
 function mdMath(t){
   const M=[];const put=(tex,disp)=>{M.push([tex,disp]);return '@@M'+(M.length-1)+'@@'};
   t=t.replace(/\$\$([\s\S]+?)\$\$/g,(_,x)=>put(x.replace(/\n>\s?/g,'\n'),true)).replace(/\$([^\$\n]+?)\$/g,(_,x)=>put(x,false));
   let h=DOMPurify.sanitize(marked.parse(t));
   h=h.replace(/@@M(\d+)@@/g,(_,n)=>{const [x,d]=M[n];const e=x.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');return d?'\\['+e+'\\]':'\\('+e+'\\)'});
   const w=document.createElement('div');w.innerHTML=h;w.querySelectorAll('table').forEach(tb=>{const d=document.createElement('div');d.className='tw';tb.replaceWith(d);d.appendChild(tb)});
-  w.querySelectorAll('blockquote').forEach(bq=>{const t=bq.textContent;if(/출제\s?범위|예상\s?소요|출제\s?근거|교육과정|성취\s?기준|논술고사\s?·|전형명/.test(t)&&t.length<400&&!/제시문/.test(t))bq.classList.add('meta')});
+  w.querySelectorAll('blockquote').forEach(bq=>{const t=bq.textContent;if(/출제\s?범위|예상\s?소요|출제\s?근거|교육과정|성취\s?기준|논술고사\s?·|전형명/.test(t)&&t.length<400&&!/제시문/.test(t)){bq.classList.add('meta');metaLine(bq)}});
+  // 이어진 제시문·조건 인용들을 한 상자로
+  let grp=null;
+  [...w.children].forEach(el=>{
+    if(el.tagName==='BLOCKQUOTE'&&!el.classList.contains('meta')){
+      if(!grp){grp=document.createElement('div');grp.className='psg';el.before(grp)}
+      grp.appendChild(el);
+    }else grp=null;
+  });
   return w.innerHTML;
 }
 let showOrig=false;
-async function showKeys(keys,box){
-  box.innerHTML='';if(!keys.length)return;
+let svIntent='';
+function pullIntent(d){
+  const kids=[...d.children];const H=/^H[1-4]$/;
+  const isStart=el=>(H.test(el.tagName)||(el.tagName==='P'&&el.firstElementChild&&el.firstElementChild.tagName==='STRONG'&&el.textContent.trim().length<30))&&/출제\s?의도/.test(el.textContent);
+  const i=kids.findIndex(isStart);if(i<0)return '';
+  const out=[];
+  for(let j=i+1;j<kids.length;j++){const el=kids[j];if(H.test(el.tagName)||el.classList.contains('psg'))break;if(el.tagName==='P'&&el.firstElementChild&&el.firstElementChild.tagName==='STRONG'&&/^\s*[\[<(]?\s*(문제|문항|예시|채점|해설|제시문)/.test(el.textContent))break;out.push(el)}
+  kids[i].remove();const h=out.map(e=>e.outerHTML).join('');out.forEach(e=>e.remove());return h;
+}
+async function showKeys(keys,box,opt={}){
+  box.innerHTML='';if(!keys.length&&!opt.pre)return;
+  const preDiv=()=>{const d=document.createElement('div');d.className='typed';d.innerHTML='<section class="intent"><h3>출제 의도</h3>'+opt.pre+'</section>';return d};
   const typed=keys.every(k=>TPIDX[k]);
-  if(!typed||showOrig){await pageImgs(keys,box,true);if(!typed){const n=document.createElement('p');n.className='srcline';n.style.cssText='width:100%;max-width:var(--pw,720px)';n.textContent='이 쪽은 아직 타이핑 전이라 원본 이미지로 보여요.';box.prepend(n)}return}
-  for(const k of keys){const pk=await getTPack(TPIDX[k]);const tx=(pk[k]||'').trim();if(!tx)continue;const d=document.createElement('div');d.className='typed';d.innerHTML=mdMath(tx);box.appendChild(d)}
+  if(!typed||showOrig){await pageImgs(keys,box,true);if(opt.pre)box.prepend(preDiv());if(!typed){const n=document.createElement('p');n.className='srcline';n.style.cssText='width:100%;max-width:var(--pw,720px)';n.textContent='이 쪽은 아직 타이핑 전이라 원본 이미지로 보여요.';box.prepend(n)}return}
+  const parts=[];for(const k of keys){const pk=await getTPack(TPIDX[k]);const tx=(pk[k]||'').trim();if(tx)parts.push(tx)}
+  if(parts.length){const d=document.createElement('div');d.className='typed';d.innerHTML=mdMath(parts.join('\n\n'));
+    if(opt.pull)svIntent=pullIntent(d);
+    if(opt.pre)d.insertAdjacentHTML('afterbegin','<section class="intent"><h3>출제 의도</h3>'+opt.pre+'</section>');
+    box.appendChild(d)}
+  else if(opt.pre)box.appendChild(preDiv());
   if(window.MathJax&&MathJax.typesetPromise){try{await MathJax.typesetPromise([box])}catch(e){}}
 }
 async function pageImgs(keys,box,keep){
@@ -688,7 +731,7 @@ async function showSolve(){
   $('#solve .body').scrollTop=0;
   tStart=0;tAcc=0;clearInterval(tTimer);$('#svTStart').textContent='시작';tick();
   const box=$('#svPages');
-  if(o.q.length)await showKeys(o.q,box);
+  svIntent='';if(o.q.length)await showKeys(o.q,box,{pull:o.a.length>0});
   else box.innerHTML=`<div class="noimg">이 문항은 원본 쪽을 찾지 못했어요. 아래 요약으로 문제를 확인하세요.<p style="color:var(--ink);text-align:left;margin:12px 0 0">${esc(i.idea)}</p></div>`;
 }
 $('#svHintBtn').onclick=()=>{const h=$('#svHint');h.hidden=!h.hidden;$('#svHintBtn').textContent=h.hidden?'힌트 보기':'힌트 가리기'};
@@ -697,7 +740,7 @@ $('#svAnsBtn').onclick=async()=>{const n=$('#svAnsNote');const o=ORIG[svCur.id];
   if(n.hidden){n.hidden=false;n.textContent='문제 아래에 예시답안 쪽을 붙였어요.';$('#svAnsBtn').textContent='예시답안 가리기';
     const area=document.createElement('div');area.id='ansArea';area.className='pages';area.style.width='100%';
     const sep=document.createElement('div');sep.className='srcline';sep.style.cssText='width:100%;max-width:var(--pw,720px);border-top:2px solid var(--pencil);padding-top:6px;color:var(--pencil);font-weight:600';sep.textContent='예시답안·해설';
-    const wrap=document.createElement('div');wrap.className='pages';wrap.style.width='100%';area.append(sep,wrap);$('#svPages').append(area);await showKeys(o.a,wrap);sep.scrollIntoView({behavior:'smooth'})}
+    const wrap=document.createElement('div');wrap.className='pages';wrap.style.width='100%';area.append(sep,wrap);$('#svPages').append(area);await showKeys(o.a,wrap,{pre:svIntent});sep.scrollIntoView({behavior:'smooth'})}
   else{n.hidden=true;$('#svAnsBtn').textContent='예시답안 보기';if(old)old.hidden=true;if(old)old.id='ansOld'}};
 $('#svStatus').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const r=rec.get(svCur.id);if(r.st===b.dataset.st)delete r.st;else r.st=b.dataset.st;rec.set(svCur.id,r);$$('#svStatus button').forEach(x=>x.setAttribute('aria-pressed',r.st===x.dataset.st))});
 $('#svMemo').addEventListener('input',debounce(saveMemo,400));
