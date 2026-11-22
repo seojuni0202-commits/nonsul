@@ -326,6 +326,8 @@ body{word-break:keep-all;overflow-wrap:break-word}
 .clist .ci.on{color:var(--blue);font-weight:600;background:var(--blue-soft);border-left-color:var(--blue)}
 .cdoc{background:#fff;border:1px solid var(--line);border-radius:12px;padding:24px clamp(16px,3vw,36px);min-width:0}
 .cdoc h1{font-size:1.5rem;margin:0 0 10px}
+.figp{margin:14px 0;text-align:center}.figimg{max-width:100%;height:auto;display:inline-block;background:#fff}
+.pv .figimg{max-height:180px;width:auto!important}
 .cnav{position:sticky;top:var(--tabsh,52px);z-index:4;background:#fff;margin:10px calc(-1*clamp(16px,3vw,36px)) 6px;padding:8px clamp(16px,3vw,36px) 8px;border-bottom:1px solid var(--line)}
 .ccats{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
 .ccats button{font:inherit;font-weight:600;font-size:.95rem;min-height:40px;padding:6px 18px;border:0;background:#fff;color:#374151;cursor:pointer}
@@ -602,6 +604,16 @@ function getTPack(c){if(!tpacks[c])tpacks[c]=fetch('txt/'+c+'.json').then(r=>r.o
 const ST_LAB={done:'풀었음',again:'다시 볼 것',wrong:'틀림'};
 const rec={get(id){try{return JSON.parse(localStorage.getItem('rec:'+id)||'{}')}catch(e){return {}}},set(id,v){try{localStorage.setItem('rec:'+id,JSON.stringify(v))}catch(e){}}};
 const packs={};
+let FIGS=null;const fpacks={};
+function getFPack(c){if(!fpacks[c])fpacks[c]=fetch('fig/'+c+'.json').then(r=>r.ok?r.json():{}).catch(()=>({}));return fpacks[c]}
+async function hydrateFigs(root){
+  const list=[...(root||document).querySelectorAll('img.figimg[data-fig]:not([data-on])')];if(!list.length)return;
+  if(!FIGS){try{FIGS=await fetch('figs.json').then(r=>r.ok?r.json():{})}catch(e){FIGS={}}}
+  for(const im of list){im.dataset.on='1';const k=im.dataset.fig,c=FIGS[k];if(!c){im.closest('.figp')?.remove();continue}
+    getFPack(c).then(pk=>{if(!pk[k]){im.closest('.figp')?.remove();return}
+      im.onload=()=>{im.style.width=Math.round(im.naturalWidth*0.6)+'px'};im.src='data:image/webp;base64,'+pk[k]})}
+}
+new MutationObserver(()=>{clearTimeout(hydrateFigs.t);hydrateFigs.t=setTimeout(()=>hydrateFigs(),60)}).observe(document.documentElement,{childList:true,subtree:true});
 function getPack(c){if(!packs[c])packs[c]=fetch('img/'+c+'.json').then(r=>r.ok?r.json():{}).catch(()=>({}));return packs[c]}
 const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
 const docCache={};
@@ -1090,6 +1102,7 @@ function examTeX(x){
     out+=c}
   return out}
 function mdMath(t){
+  t=t.replace(/<!--figdesc[\s\S]*?-->/g,'').replace(/!\[[^\]\n]*\]\(fig:([\w-]+)\)/g,(_,k)=>`\n\n<p class="figp"><img class="figimg" data-fig="${k}" alt="그림" loading="lazy"></p>\n\n`);
   const M=[];const put=(tex,disp)=>{M.push([tex,disp]);return '@@M'+(M.length-1)+'@@'};
   t=t.replace(/\$\$([\s\S]+?)\$\$/g,(_,x)=>put(x.replace(/\n>\s?/g,'\n'),true)).replace(/\$([^\$\n]+?)\$/g,(_,x)=>put(examTeX(x),false));
   t=t.replace(/(^|[^~])~(?!~)/g,'$1\\~');
