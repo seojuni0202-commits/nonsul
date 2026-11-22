@@ -754,6 +754,7 @@ async function showSolve(){
   $('#solve .body').scrollTop=0;
   tStart=0;tAcc=0;clearInterval(tTimer);$('#svTStart').textContent='시작';tick();
   const box=$('#svPages');
+  {const oa=document.getElementById('ansArea');if(oa)oa.remove()}
   svIntent='';if(o.q.length)await showKeys(o.q,box,{pull:o.a.length>0});
   else box.innerHTML=`<div class="noimg">이 문항은 원본 쪽을 찾지 못했어요. 아래 요약으로 문제를 확인하세요.<p style="color:var(--ink);text-align:left;margin:12px 0 0">${esc(i.idea)}</p></div>`;
 }
@@ -764,7 +765,7 @@ $('#svAnsBtn').onclick=async()=>{const n=$('#svAnsNote');const o=ORIG[svCur.id];
     const area=document.createElement('div');area.id='ansArea';area.className='pages';area.style.width='100%';
     const sep=document.createElement('div');sep.className='srcline';sep.style.cssText='width:100%;max-width:var(--pw,720px);border-top:2px solid var(--pencil);padding-top:6px;color:var(--pencil);font-weight:600';sep.textContent='예시답안·해설';
     const wrap=document.createElement('div');wrap.className='pages';wrap.style.width='100%';area.append(sep,wrap);$('#svPages').append(area);await showKeys(o.a,wrap,{pre:svIntent});sep.scrollIntoView({behavior:'smooth'})}
-  else{n.hidden=true;$('#svAnsBtn').textContent='예시답안 보기';if(old)old.hidden=true;if(old)old.id='ansOld'}};
+  else{n.hidden=true;$('#svAnsBtn').textContent='예시답안 보기';if(old)old.remove()}};
 $('#svStatus').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const r=rec.get(svCur.id);if(r.st===b.dataset.st)delete r.st;else r.st=b.dataset.st;rec.set(svCur.id,r);$$('#svStatus button').forEach(x=>x.setAttribute('aria-pressed',r.st===x.dataset.st))});
 $('#svMemo').addEventListener('input',debounce(saveMemo,400));
 $('#svClose').onclick=closeSolve;
