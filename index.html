@@ -973,6 +973,7 @@ document.addEventListener('gesturestart',e=>e.preventDefault(),{passive:false});
 document.addEventListener('gesturechange',e=>e.preventDefault(),{passive:false});
 document.addEventListener('dblclick',e=>{if(!e.target.closest('input,textarea'))e.preventDefault()},{passive:false});
 document.addEventListener('touchmove',e=>{if(e.touches.length>1&&!e.target.closest('.ink-scroll'))e.preventDefault()},{passive:false});
+addEventListener('scroll',()=>{clearTimeout(window.__scT);window.__scT=setTimeout(()=>{try{if($('#solve').hidden)sessionStorage.setItem('nsm:sc:'+location.hash,String(Math.round(scrollY)))}catch(e){}},200)},{passive:true});
 function typeset(el){if(window.MathJax&&MathJax.typesetPromise)MathJax.typesetPromise([el]).catch(()=>{})}
 // 필수 개념 탭
 let CIDX=null;
@@ -1191,6 +1192,8 @@ function metaLine(bq){
 }
 // 본문 속 수식을 시험지처럼: lim·Σ 첨자는 아래·위로, 맨 바깥 분수는 제 크기로
 function examTeX(x){
+  // 절댓값·노름: 안에 분수·합·적분처럼 정말 큰 식이 없으면 \left|…\right| 대신 보통 크기 막대(화살표 때문에 막대가 길게 늘어나던 문제)
+  x=x.replace(/\\left\s*\\?\|((?:(?!\\left|\\right).)*?)\\right\s*\\?\|/g,(m,inn)=>/\\d?frac|\\tfrac|\\sum|\\int|\\prod|\\begin|\\binom|\\lim/.test(inn)?m:(m.includes('\\|')&&/^\\left\s*\\\|/.test(m)?'\\|'+inn+'\\|':'|'+inn+'|'));
   // \left( … \right) 안의 \dfrac 은 시험지처럼 글자 크기 분수로 (괄호가 줄보다 커지지 않게)
   {let o='',lv=0;for(let i=0;i<x.length;i++){
     if(x.startsWith('\\left',i)&&!/[a-zA-Z]/.test(x[i+5]||'')){lv++;o+='\\left';i+=4;continue}
@@ -1298,8 +1301,11 @@ function openSolve(id,list){
   const was=!$('#solve').hidden;
   $('#solve').hidden=false;document.body.style.overflow='hidden';showSolve();$('#svClose').focus();
   // 뒤로가기(안드로이드·브라우저)로 문제 화면이 닫히도록 기록을 하나 쌓는다
-  if(!was&&!(history.state&&history.state.solve)){try{history.pushState({solve:1},'',location.href)}catch(e){}}
+  if(!was&&!(history.state&&history.state.solve)){try{history.pushState({solve:1},'',urlQ(id))}catch(e){}}
 }
+/* 새로고침해도 보던 화면으로: 열어 둔 문제는 주소의 ?q=번호(필기 패널은 &ink=1)로, 목록 스크롤·검색·필터는 이 탭에만 기억 */
+function urlQ(id,ink){const u=new URL(location.href);if(id==null){u.searchParams.delete('q');u.searchParams.delete('ink')}else{u.searchParams.set('q',id);if(ink)u.searchParams.set('ink','1');else if(ink===false)u.searchParams.delete('ink')}return u.pathname+u.search+u.hash}
+window.NSM_urlQ=urlQ;
 function requestCloseSolve(){const st=history.state||{};const n=st.ink?2:st.solve?1:0;if(n)history.go(-n);else closeSolve()}
 window.addEventListener('popstate',e=>{const st=e.state||{};if(!st.solve&&!$('#solve').hidden)closeSolve()});
 /* 추가 학습: 문항별 필수 개념·논리 라벨 + 인지과학 근거의 공부 재료(인출·자기설명·오류 점검·섞어 풀기·간격 복습) */
@@ -1342,10 +1348,10 @@ const STUDY=(()=>{
   $('#svStudy .stabs').addEventListener('click',e=>{const b=e.target.closest('[data-stab]');if(!b)return;tab=b.dataset.stab;try{localStorage.setItem('stab',tab)}catch(e){}draw()});
   return {open(i){cur=i;draw()},draw,lab:i=>L?lab(i):null};
 })();
-function closeSolve(){saveMemo();setTimeout(()=>{if(!$('#v-prep').hidden){$$('#pbody .st').forEach(x=>x.parentNode.removeChild(x));markPrep($('#pbody'))}},0);if(window.NSM&&NSM.onClose)NSM.onClose();$('#solve').hidden=true;document.body.style.overflow='';renderCards();const c=document.querySelector(`.card[data-i="${svCur?svCur.id:-1}"]`);if(c)c.focus()}
+function closeSolve(){try{if(new URLSearchParams(location.search).has('q'))history.replaceState(history.state&&history.state.solve?null:history.state,'',urlQ(null))}catch(e){}saveMemo();setTimeout(()=>{if(!$('#v-prep').hidden){$$('#pbody .st').forEach(x=>x.parentNode.removeChild(x));markPrep($('#pbody'))}},0);if(window.NSM&&NSM.onClose)NSM.onClose();$('#solve').hidden=true;document.body.style.overflow='';renderCards();const c=document.querySelector(`.card[data-i="${svCur?svCur.id:-1}"]`);if(c)c.focus()}
 function saveMemo(){if(!svCur)return;const r=rec.get(svCur.id);r.memo=$('#svMemo').value;if(!r.memo)delete r.memo;rec.set(svCur.id,r)}
 async function showSolve(){
-  saveMemo();const i=svList[svIdx];svCur=i;{const _o=document.getElementById('svONote');if(_o)_o.remove()}const o=ORIG[i.id]||{q:[],a:[],src:''};
+  saveMemo();const i=svList[svIdx];svCur=i;try{if(!$('#solve').hidden&&new URLSearchParams(location.search).get('q')!=String(i.id))history.replaceState(history.state,'',urlQ(i.id))}catch(e){}{const _o=document.getElementById('svONote');if(_o)_o.remove()}const o=ORIG[i.id]||{q:[],a:[],src:''};
   $('#svTitle').innerHTML=`${esc(disp(i.s))} ${esc(i.y)} ${esc(kDisp(i))} · ${esc(qDisp(i.q))}<small title="${esc(gTip(i))}">${esc(gDisp(i))} · ${esc(i.subj)}${svList.length>1?` · ${svIdx+1} / ${svList.length}`:''}</small>`;
   $('#svPrev').disabled=svIdx<=0;$('#svNext').disabled=svIdx>=svList.length-1;
   STUDY.open(i);
@@ -1438,7 +1444,15 @@ Promise.all(['meta.json','items.json','scores_idx.json','hide.json','idmap.json'
   const saved=store.get('tr');if(saved&&saved!=='all'){const b=$(`.seg button[data-tr="${saved}"]`);if(b){TR=saved;$$('.seg button').forEach(x=>x.setAttribute('aria-pressed',x===b))}}
   $('#stats').innerHTML=`<div><b>${META.schools.length}</b>학교</div><div><b>${ITEMS.length.toLocaleString()}</b>문항</div><div><b>${PUB.size}</b>점수 공개 학교</div>`;
   ['#fs','#fk','#fg','#ft','#fy','#fm'].forEach(x=>enhanceSelect($(x)));
+  // 이 탭에서 쓰던 검색·필터 되살리기
+  try{const f=JSON.parse(sessionStorage.getItem('nsm:flt')||'null');if(f)for(const [k,v] of Object.entries(f)){const el=$(k);if(!el)continue;if(el.type==='checkbox')el.checked=!!v;else if(el.tagName!=='SELECT'||[...el.options].some(o=>o.value===v))el.value=v}}catch(e){}CBX.forEach(c=>c.sync&&c.sync());
+  ['#iq','#fs','#fk','#fg','#ft','#fy','#fm','#fo','#fr','#fh','#fsort'].forEach(k=>{const el=$(k);if(el)el.addEventListener(el.type==='search'?'input':'change',()=>{try{const f={};['#iq','#fs','#fk','#fg','#ft','#fy','#fm','#fo','#fr','#fh','#fsort'].forEach(q=>{const e=$(q);if(e)f[q]=e.type==='checkbox'?e.checked:e.value});sessionStorage.setItem('nsm:flt',JSON.stringify(f))}catch(e){}})})
   applyItems();renderSchoolGrid();applyScores();route();
+  // 새로고침 전 화면: 스크롤 위치, 열어 둔 문제, 필기 패널
+  try{const y=+sessionStorage.getItem('nsm:sc:'+location.hash);if(y)setTimeout(()=>window.scrollTo(0,y),700)}catch(e){}
+  {const qs=new URLSearchParams(location.search),qid=qs.get('q');
+   if(qid!=null&&ITEMS[+qid]){const L=(typeof filtered!=='undefined'&&filtered.some(x=>x.id===+qid))?filtered:null;openSolve(+qid,L);
+     if(qs.get('ink'))setTimeout(()=>{const b=document.getElementById('svInk');const ik=document.getElementById('ink');if(b&&(!ik||ik.hidden))b.click()},900)}}
 }).catch(e=>{$('#cards').innerHTML='<div class="empty">데이터를 불러오지 못했어요. 새로고침해 보세요.</div>'});
 
 /* 필기·타이머·AI 채점(ink.js)에 넘기는 작은 API */
