@@ -1236,13 +1236,15 @@ function examTeX(x){
     o+=x[i]}x=o}
   x=x.replace(/\\left\s*\(([^()]*?\\tfrac[^()]*?)\\right\s*\)/g,'($1)');
   x=x.replace(/\\(lim|sum|prod)(?!\\limits)\s*(?=[_^])/g,'\\$1\\limits');
-  let out='',d=0,pend=0;for(let i=0;i<x.length;i++){const c=x[i];
-    if(c==='{')d++;else if(c==='}'){d--;if(d===0&&pend>0){out+=c;if(--pend===0)out+='}';continue}}
-    if(d===0&&pend===0){const m=/^\\d?frac\s*(?=\{)/.exec(x.slice(i,i+8));
-      if(m){out+='{\\small\\dfrac';i+=m[0].length-1;pend=2;continue}
+  // 분수 인자 하나의 끝: {…} 묶음, \명령, 또는 글자 하나(\frac{a}2 처럼 중괄호 없는 인자도 TeX에서 맞는 식)
+  const grp=(s,j)=>{let e=0;for(let k=j;k<s.length;k++){if(s[k]==='{')e++;else if(s[k]==='}'&&--e===0)return k+1}return s.length};
+  const arg=(s,j)=>{while(s[j]===' ')j++;if(s[j]==='{')return grp(s,j);if(s[j]==='\\'){let k=j+1;if(/[a-zA-Z]/.test(s[k]||'')){while(/[a-zA-Z]/.test(s[k]||''))k++}else k++;return k}return Math.min(j+1,s.length)};
+  let out='',d=0;for(let i=0;i<x.length;i++){const c=x[i];
+    if(c==='{')d++;else if(c==='}')d--;
+    else if(d===0&&c==='\\'){const m=/^\\d?frac\s*(?=\{)/.exec(x.slice(i,i+8));
+      if(m){const a=i+m[0].length,e=arg(x,arg(x,a));out+='{\\small\\dfrac'+x.slice(a,e)+'}';i=e-1;continue}
       if(x.startsWith('\\frac',i)&&!/[a-zA-Z]/.test(x[i+5]||'')){out+='\\dfrac';i+=4;continue}}
     out+=c}
-  if(pend>0)out+='}';
   return out}
 /* 시험지 한 줄 한 줄이 문단으로 쪼개져 줄 사이가 크게 벌어지던 것을, 시험지처럼 한 덩어리(줄바꿈 유지)로 묶는다.
    - 앞 문단이 문장 끝(다. 오. ? ! :)으로 끝나지 않고 다음 문단이 짧은 이어진 줄이면 한 문단으로(줄바꿈 <br>)
