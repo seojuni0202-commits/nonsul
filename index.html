@@ -327,6 +327,7 @@ body{word-break:keep-all;overflow-wrap:break-word}
 .cdoc{background:#fff;border:1px solid var(--line);border-radius:12px;padding:24px clamp(16px,3vw,36px);min-width:0}
 .cdoc h1{font-size:1.5rem;margin:0 0 10px}
 .figp{margin:14px 0;text-align:center}
+.onote{width:100%;max-width:var(--pw,720px);margin:0 0 10px;padding:8px 12px;border-left:3px solid #d97706;background:#fffbeb;color:#78350f;font-size:.86rem;line-height:1.6;border-radius:0 6px 6px 0}.onote b{margin-right:6px}
 .typed p.figcap{text-align:center;font-size:.86rem;color:var(--muted,#6b7280);margin:-6px 0 14px}
 .study .stabs{display:flex;gap:2px;margin:0 0 10px;border-bottom:1px solid var(--line);overflow-x:auto}
 .study .stabs button{flex:1 1 auto;white-space:nowrap;background:none;border:0;border-bottom:2px solid transparent;padding:6px 4px;font:inherit;font-size:.84rem;color:var(--muted,#6b7280);cursor:pointer;min-height:36px}
@@ -449,7 +450,7 @@ h2{font-size:1.55rem;margin:0 0 16px;letter-spacing:-.01em}
 .typed .psg>blockquote p{margin:0 0 .8em}
 .typed table,.doc table{line-height:1.7}
 .typed table mjx-container:not([display="true"]),.doc table mjx-container:not([display="true"]){line-height:normal}
-.card p,.card .key{line-height:1.75}
+.card p,.card .key,.card li{line-height:1.75}
 .card .pv .pvdoc{line-height:1.8}
 .doc p,.doc li{max-width:42em}
 
@@ -490,7 +491,7 @@ h2{font-size:1.55rem;margin:0 0 16px;letter-spacing:-.01em}
 /* [카드 미리보기] 13.4px → 14.4px, 줄 간격 1.75. */
 .card .pv .pvdoc{font-size:.9rem;line-height:1.75}
 .card .pv.rich{max-height:230px}
-.card p,.card .key{line-height:1.75}
+.card p,.card .key,.card li{line-height:1.75}
 /* [폰] 좁은 화면에서 여백을 줄여 한 줄 글자 수를 지킨다. */
 @media (max-width:480px){
   .solve .body{padding-left:max(8px,env(safe-area-inset-left,0px));padding-right:max(8px,env(safe-area-inset-right,0px))}
@@ -1225,11 +1226,6 @@ function tightenFlow(w){
   }
 }
 function mdMath(t){
-  // 그림 설명 주석 안에 숨은 그림 번호("[그림 1]", "<그림 2>")는 그림 아래 캡션으로 되살린다(본문에 이미 있으면 생략)
-  t=t.replace(/<!--figdesc([\s\S]*?)-->(\s*(?:!\[[^\]\n]*\]\(fig:[\w-]+\)\s*)+)/g,(m,d,imgs,off,all)=>{
-    const c=d.match(/[\[<〈]\s*(그림|표|사진)\s*([0-9]+|[ⅠⅡⅢⅣⅤ]+|[가-하])\s*[\]>〉]/);if(!c)return imgs;
-    const lab=c[1]+' '+c[2],near=all.slice(off+m.length,off+m.length+60).replace(/\s+/g,'');
-    if(near.includes(c[1]+c[2]))return imgs;return imgs.trimEnd()+'\n\n<p class="figcap">['+lab+']</p>\n\n'})
   t=t.replace(/<!--figdesc[\s\S]*?-->/g,'').replace(/!\[[^\]\n]*\]\(fig:([\w-]+)\)/g,(_,k)=>`\n\n<p class="figp"><img class="figimg" data-fig="${k}" alt="그림" loading="lazy"></p>\n\n`);
   const M=[];const put=(tex,disp)=>{M.push([tex,disp]);return '@@M'+(M.length-1)+'@@'};
   t=t.replace(/\*\*(?=\S)([^*\n]+?)\*\*/g,'<strong>$1</strong>');
@@ -1340,7 +1336,7 @@ const STUDY=(()=>{
 function closeSolve(){saveMemo();setTimeout(()=>{if(!$('#v-prep').hidden){$$('#pbody .st').forEach(x=>x.parentNode.removeChild(x));markPrep($('#pbody'))}},0);if(window.NSM&&NSM.onClose)NSM.onClose();$('#solve').hidden=true;document.body.style.overflow='';renderCards();const c=document.querySelector(`.card[data-i="${svCur?svCur.id:-1}"]`);if(c)c.focus()}
 function saveMemo(){if(!svCur)return;const r=rec.get(svCur.id);r.memo=$('#svMemo').value;if(!r.memo)delete r.memo;rec.set(svCur.id,r)}
 async function showSolve(){
-  saveMemo();const i=svList[svIdx];svCur=i;const o=ORIG[i.id]||{q:[],a:[],src:''};
+  saveMemo();const i=svList[svIdx];svCur=i;{const _o=document.getElementById('svONote');if(_o)_o.remove()}const o=ORIG[i.id]||{q:[],a:[],src:''};
   $('#svTitle').innerHTML=`${esc(disp(i.s))} ${esc(i.y)} ${esc(kDisp(i))} · ${esc(qDisp(i.q))}<small title="${esc(gTip(i))}">${esc(gDisp(i))} · ${esc(i.subj)}${svList.length>1?` · ${svIdx+1} / ${svList.length}`:''}</small>`;
   $('#svPrev').disabled=svIdx<=0;$('#svNext').disabled=svIdx>=svList.length-1;
   STUDY.open(i);
@@ -1358,6 +1354,7 @@ async function showSolve(){
     if(o.a.length){const h=document.createElement('p');h.className='note';h.style.marginTop='12px';h.textContent='해설·채점 자료는 "예시답안 보기"로 볼 수 있어요.';box.appendChild(h)}return}
   svIntent='';const qk=showOrig&&o.oq&&o.oq.length?o.oq:o.q;if(qk.length)await showKeys(qk,box,{pull:o.a.length>0});
   else box.innerHTML=`<div class="noimg">이 문항은 원본 쪽을 찾지 못했어요. 아래 요약으로 문제를 확인하세요.<p style="color:var(--ink);text-align:left;margin:12px 0 0">${esc(i.idea)}</p></div>`;
+  if(ONOTE[i.id]&&svCur===i){const n=document.createElement('p');n.id='svONote';n.className='onote';n.innerHTML='<b>원본 시험지 표기</b> '+texInline(ONOTE[i.id]);box.prepend(n);typeset(n)}
 }
 $('#svHintBtn').onclick=()=>{const h=$('#svHint');h.hidden=!h.hidden;if(!h.hidden)typeset(h);$('#svHintBtn').textContent=h.hidden?'힌트 보기':'힌트 가리기'};
 $('#svAnsBtn').onclick=async()=>{const n=$('#svAnsNote');const o=ORIG[svCur.id];if(!o)return;
@@ -1398,7 +1395,7 @@ function route(){
 window.addEventListener('hashchange',route);
 $$('.seg button').forEach(b=>b.onclick=()=>{TR=b.dataset.tr;store.set('tr',TR);$$('.seg button').forEach(x=>x.setAttribute('aria-pressed',x===b));applyItems();renderSchoolGrid();if(curSchool&&!$('#v-school').hidden){const k=$('#ssub [aria-pressed="true"]')?.dataset.k;if(k==='items')showSchoolTab('items')}});
 
-let ITEMS_V=[],IDMAP={};
+let ITEMS_V=[],IDMAP={},ONOTE={};
 /* 카드를 대문항 단위로 다시 묶으면서 번호가 바뀌었다: 이 기기의 내 기록·메모를 새 번호로 한 번 옮긴다 */
 function migrateRec(){try{if(localStorage.getItem('mig:norm1')||!Object.keys(IDMAP).length)return;
   const rank={wrong:3,again:2,done:1};const acc={};
@@ -1407,7 +1404,7 @@ function migrateRec(){try{if(localStorage.getItem('mig:norm1')||!Object.keys(IDM
   const old=Object.keys(localStorage).filter(k=>/^rec:\d+$/.test(k));old.forEach(k=>localStorage.removeItem(k));
   for(const [n,a] of Object.entries(acc))localStorage.setItem('rec:'+n,JSON.stringify(a));
   localStorage.setItem('mig:norm1','1');window.__inkMig=IDMAP}catch(e){}}
-Promise.all(['meta.json','items.json','scores_idx.json','hide.json','idmap.json'].map(f=>fetch(f).then(r=>r.json()).catch(()=>({})))).then(async([m,it,sc,hd,im])=>{IDMAP=im||{};migrateRec();
+Promise.all(['meta.json','items.json','scores_idx.json','hide.json','idmap.json','orignote.json'].map(f=>fetch(f).then(r=>r.json()).catch(()=>({})))).then(async([m,it,sc,hd,im,on])=>{IDMAP=im||{};ONOTE=on||{};migrateRec();
   try{SESS=await fetch('sessions.json').then(r=>r.ok?r.json():{})}catch(e){SESS={}}
   try{SESSQ=await fetch('sessq.json').then(r=>r.ok?r.json():{})}catch(e){SESSQ={}}
   META=m;ITEMS=it;SCIDX=sc||{};SCORES=[];ITEMS.forEach((i,n)=>{i.id=n;if(hd&&hd[n]!=null)i.dup=1;i.tags=[...new Set(i.tags.map(t=>TAGALIAS[t]||t))]});ITEMS_V=ITEMS.filter(i=>!i.dup);
