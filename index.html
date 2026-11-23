@@ -96,7 +96,7 @@ section[hidden]{display:none}
 h2{font-family:var(--f-display);font-size:1.35rem;margin:0 0 4px}
 .lede{color:var(--muted);margin:0 0 16px;max-width:70ch}
 /* 처음 들어온 기기: 학교 고르기 → 이용 가이드 */
-.guidebtn{font:inherit;font-size:.8rem;font-weight:600;margin-left:12px;vertical-align:middle;border:1px solid var(--line);background:var(--sheet);color:var(--blue);border-radius:999px;padding:4px 12px;min-height:32px;cursor:pointer}
+.guidebtn{font:inherit;font-size:.8rem;font-weight:600;margin-left:8px;vertical-align:middle;border:1px solid var(--line);background:var(--sheet);color:var(--blue);border-radius:999px;padding:4px 12px;min-height:32px;cursor:pointer}
 .onb{position:fixed;inset:0;z-index:50;background:rgba(17,24,39,.42);display:flex;align-items:center;justify-content:center;padding:16px}
 .onb[hidden]{display:none}
 .onb-box{background:#fff;border-radius:14px;max-width:640px;width:100%;max-height:calc(100vh - 32px);overflow:auto;padding:24px;box-shadow:0 12px 40px rgba(0,0,0,.18)}
@@ -112,7 +112,7 @@ h2{font-family:var(--f-display);font-size:1.35rem;margin:0 0 4px}
 .onb-steps .n{flex:none;width:26px;height:26px;border-radius:50%;background:var(--blue);color:#fff;font-weight:700;font-size:.85rem;display:flex;align-items:center;justify-content:center;margin-top:2px}
 .onb-steps b{display:block;margin-bottom:2px}.onb-steps p{margin:0;line-height:1.65;color:#374151;font-size:.93rem}
 .onb-mine{margin:0 0 14px;font-size:.9rem;color:var(--muted)}
-.onb-foot .primary{background:var(--blue);color:#fff;border-color:var(--blue)}
+.onb-foot .primary{background:var(--blue);color:#fff;border-color:var(--blue)}.onb-foot .primary:disabled{opacity:.45;cursor:not-allowed}
 
 .filters{display:flex;flex-wrap:wrap;gap:10px;align-items:end;background:var(--sheet);border:1px solid var(--line);border-radius:8px;padding:12px}
 .filters label{display:flex;flex-direction:column;gap:3px;font-size:.75rem;color:var(--muted);letter-spacing:.02em}
@@ -566,7 +566,7 @@ html{touch-action:manipulation;-webkit-text-size-adjust:100%}
 </style>
 
 <header class="top"><div class="wrap">
-  <h1>논술 기출 지도<button type="button" class="guidebtn" id="guideBtn">이용 가이드</button><small>수리논술 · 생명논술 · 메디컬 46개교 기출을 공식 문항카드로 정리</small></h1>
+  <h1>논술 기출 지도<button type="button" class="guidebtn" id="guideBtn">이용 가이드</button><button type="button" class="guidebtn" id="pickBtn">학교 다시 고르기</button><small>수리논술 · 생명논술 · 메디컬 46개교 기출을 공식 문항카드로 정리</small></h1>
   <div class="stats" id="stats"><div><b>46</b>학교</div><div><b>2,945</b>문항</div><div><b>3,632</b>점수 기록</div></div>
 </div></header>
 <nav class="tabs" aria-label="보기"><div class="wrap">
@@ -1561,21 +1561,25 @@ Promise.all(['meta.json','items.json','scores_idx.json','hide.json','idmap.json'
 /* 필기·타이머·AI 채점(ink.js)에 넘기는 작은 API */
 
 // 처음 들어온 기기: 준비하는 학교를 묻고(즐겨찾기로 저장) → 이용 가이드
+let ONBF=false; // 처음 들어온 기기: 학교를 고르기 전에는 닫을 수 없음
 function onbSave(){try{localStorage.setItem('nsm:onb','1')}catch(e){}}
-function onbClose(){$('#onb').hidden=true;document.body.style.overflow='';onbSave();const g=$('#guideBtn');if(g)g.focus()}
+function onbClose(){if(ONBF&&!FAV.d.s.size)return;ONBF=false;$('#onb').hidden=true;document.body.style.overflow='';onbSave();const g=$('#guideBtn');if(g)g.focus()}
 function onbPick(){const box=$('#onbBox');const sel=new Set(FAV.d.s);
   const names=META.schools.map(s=>s.n).sort((a,b)=>disp(a).localeCompare(disp(b),'ko'));
   box.innerHTML=`<h3 id="onbT">어느 학교를 준비하나요?</h3><p class="sub">고른 학교는 이 기기에서 즐겨찾기로 저장돼 목록 맨 앞에 나와요. 나중에 별표로 바꿀 수 있어요.</p>
   <input type="search" id="onbQ" placeholder="학교 이름 (예: 한양, 성대, 카대)" aria-label="학교 이름으로 찾기" autocomplete="off">
   <div class="onb-list" id="onbList" role="group" aria-label="학교 고르기"></div>
-  <div class="onb-foot"><span class="cnt" id="onbCnt"></span><button type="button" class="btn" id="onbSkip">나중에 고르기</button><button type="button" class="btn primary" id="onbNext">다음</button></div>`;
+  <div class="onb-foot"><span class="cnt" id="onbCnt"></span>${ONBF?'':'<button type="button" class="btn" id="onbCancel">닫기</button>'}<button type="button" class="btn primary" id="onbNext">${ONBF?'다음':'저장'}</button></div>`;
   const draw=()=>{const q=$('#onbQ').value.replace(/\s+/g,'').toLowerCase();
-    $('#onbList').innerHTML=names.filter(n=>!q||sHit(disp(n).replace(/\s+/g,'').toLowerCase(),q)||disp(n).replace(/\s+/g,'').toLowerCase().includes(q)).map(n=>`<button type="button" data-n="${esc(n)}" aria-pressed="${sel.has(n)}">${esc(sName(n))}</button>`).join('')||'<p class="note">찾는 학교가 없어요.</p>';
-    $('#onbCnt').textContent=sel.size?sel.size+'개 학교 선택':'여러 개 골라도 돼요'};
+    const hit=n=>!q||sHit(disp(n).replace(/\s+/g,'').toLowerCase(),q)||disp(n).replace(/\s+/g,'').toLowerCase().includes(q);
+    // 고른 학교는 검색어와 상관없이 맨 앞에
+    $('#onbList').innerHTML=names.filter(n=>sel.has(n)).concat(names.filter(n=>!sel.has(n)&&hit(n))).map(n=>`<button type="button" data-n="${esc(n)}" aria-pressed="${sel.has(n)}">${esc(sName(n))}</button>`).join('')||'<p class="note">찾는 학교가 없어요.</p>';
+    cnt()};
+  const cnt=()=>{$('#onbCnt').textContent=sel.size?sel.size+'개 학교 선택':'한 곳 이상 골라 주세요 (여러 개 가능)';$('#onbNext').disabled=!sel.size};
   draw();$('#onbQ').addEventListener('input',draw);
-  $('#onbList').addEventListener('click',e=>{const b=e.target.closest('[data-n]');if(!b)return;const n=b.dataset.n;sel.has(n)?sel.delete(n):sel.add(n);b.setAttribute('aria-pressed',sel.has(n));$('#onbCnt').textContent=sel.size?sel.size+'개 학교 선택':'여러 개 골라도 돼요'});
-  $('#onbSkip').onclick=()=>onbGuide();
-  $('#onbNext').onclick=()=>{for(const n of names){if(sel.has(n)!==FAV.has('s',n))FAV.toggle('s',n)}onbGuide()};
+  $('#onbList').addEventListener('click',e=>{const b=e.target.closest('[data-n]');if(!b)return;const n=b.dataset.n;sel.has(n)?sel.delete(n):sel.add(n);draw()});
+  if($('#onbCancel'))$('#onbCancel').onclick=onbClose;
+  $('#onbNext').onclick=()=>{if(!sel.size)return;for(const n of names){if(sel.has(n)!==FAV.has('s',n))FAV.toggle('s',n)}if(ONBF)onbGuide();else onbClose()};
   setTimeout(()=>$('#onbQ').focus(),50)}
 function onbGuide(){const box=$('#onbBox');const mine=[...FAV.d.s].map(sName);
   box.innerHTML=`<h3 id="onbT">이렇게 쓰면 돼요</h3>${mine.length?`<p class="onb-mine">즐겨찾기: ${esc(mine.join(', '))}</p>`:''}
@@ -1586,16 +1590,16 @@ function onbGuide(){const box=$('#onbBox');const mine=[...FAV.d.s].map(sName);
    <li><span class="n">4</span><div><b>풀고 나서 추가 학습</b><p>오른쪽 「추가 학습」에서 관련 기출을 이어 풀고, 개념·논리를 익혀요. 단순 개념 정리가 아니라, 이전 기출에서 쓰인 특이한 발상과 자주 나오는 정석 논리를 미리 익히도록 모아 둔 거예요.</p></div></li>
   </ol>
   <div class="onb-foot"><button type="button" class="btn" id="onbPick2">학교 다시 고르기</button><button type="button" class="btn primary" id="onbGo">2027 대비로 가기</button></div>`;
-  $('#onbPick2').onclick=onbPick;$('#onbGo').onclick=()=>{onbClose();location.hash='prep'};setTimeout(()=>$('#onbGo').focus(),50)}
+  $('#onbPick2').onclick=()=>{onbPick()};$('#onbGo').onclick=()=>{onbClose();location.hash='prep'};setTimeout(()=>$('#onbGo').focus(),50)}
 function onbOpen(step){$('#onb').hidden=false;document.body.style.overflow='hidden';step==='guide'?onbGuide():onbPick()}
-$('#onb').addEventListener('click',e=>{if(e.target.id==='onb')onbClose()});
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#onb').hidden)onbClose()});
-$('#guideBtn').addEventListener('click',()=>onbOpen('guide'));
+$('#onb').addEventListener('click',e=>{if(e.target.id==='onb'&&!(ONBF&&$('#onbList')))onbClose()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#onb').hidden&&!(ONBF&&$('#onbList')))onbClose()});
+$('#guideBtn').addEventListener('click',()=>onbOpen('guide'));$('#pickBtn').addEventListener('click',()=>onbOpen('pick'));
 function onbMaybe(){let seen=null;try{seen=localStorage.getItem('nsm:onb')}catch(e){}
   const sp=new URLSearchParams(location.search);
   // 자동 점검 브라우저에서는 ?onb 가 있을 때만 띄운다
   if(navigator.webdriver&&!sp.has('onb'))return;
-  if(!seen&&!sp.has('q'))onbOpen('pick')}
+  if(!seen&&!sp.has('q')){ONBF=true;onbOpen('pick')}}
 
 window.NSM={cur:()=>svCur,open:id=>openSolve(id),orig:id=>ORIG[id],
   title:id=>cardTitle(ITEMS[id]),n:()=>ITEMS.length,
