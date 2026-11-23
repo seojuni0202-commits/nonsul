@@ -1,4 +1,4 @@
-<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover"><meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#ffffff"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="논술"><meta name="apple-mobile-web-app-status-bar-style" content="default"><script>if("serviceWorker" in navigator)addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}))</script><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon-192.png"><link rel="icon" href="icon-192.png"></head><body><div id="lockGate" style="position:fixed;inset:0;z-index:9999;background:#fff;display:flex;align-items:center;justify-content:center;padding:24px;font-family:'IBM Plex Sans KR','Apple SD Gothic Neo','Malgun Gothic',sans-serif;color:#111827">
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover"><meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#ffffff"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="논술"><meta name="apple-mobile-web-app-status-bar-style" content="default"><script>if("serviceWorker" in navigator)addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}))</script><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" sizes="180x180" href="icon-180.png"><link rel="icon" href="icon-192.png"></head><body><div id="lockGate" style="position:fixed;inset:0;z-index:9999;background:#fff;display:flex;align-items:center;justify-content:center;padding:24px;font-family:'IBM Plex Sans KR','Apple SD Gothic Neo','Malgun Gothic',sans-serif;color:#111827">
   <form id="lockForm" style="width:100%;max-width:360px;display:flex;flex-direction:column;gap:14px" autocomplete="on">
     <div style="font-size:1.5rem;font-weight:700">논술 기출 지도</div>
     <label for="lockPw" style="font-size:.95rem;color:#4b5563">비밀번호를 입력하세요</label>
@@ -97,6 +97,11 @@ h2{font-family:var(--f-display);font-size:1.35rem;margin:0 0 4px}
 .lede{color:var(--muted);margin:0 0 16px;max-width:70ch}
 /* 처음 들어온 기기: 학교 고르기 → 이용 가이드 */
 .guidebtn{font:inherit;font-size:.8rem;font-weight:600;margin-left:8px;vertical-align:middle;border:1px solid var(--line);background:var(--sheet);color:var(--blue);border-radius:999px;padding:4px 12px;min-height:32px;cursor:pointer}
+.dlwrap{position:relative;display:inline-block;vertical-align:middle}
+.dlmenu{position:absolute;right:0;top:calc(100% + 6px);width:max-content;max-width:calc(100vw - 32px);flex-wrap:wrap;z-index:40;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);padding:10px;display:flex;gap:6px;align-items:center;white-space:nowrap;font-size:.85rem;font-weight:400}
+.dlmenu[hidden]{display:none}@media (max-width:560px){.dlmenu .dlh{display:none}.dlmenu button{padding:6px 10px}}.dlmenu .dlh{color:var(--muted);margin-right:4px}
+.dlmenu button{font:inherit;font-weight:600;border:1px solid var(--line);background:var(--sheet);border-radius:8px;padding:6px 12px;min-height:36px;cursor:pointer;color:var(--ink)}
+.dlmenu button:hover{border-color:var(--blue);color:var(--blue)}
 .onb{position:fixed;inset:0;z-index:50;background:rgba(17,24,39,.42);display:flex;align-items:center;justify-content:center;padding:16px}
 .onb[hidden]{display:none}
 .onb-box{background:#fff;border-radius:14px;max-width:640px;width:100%;max-height:calc(100vh - 32px);overflow:auto;padding:24px;box-shadow:0 12px 40px rgba(0,0,0,.18)}
@@ -566,7 +571,7 @@ html{touch-action:manipulation;-webkit-text-size-adjust:100%}
 </style>
 
 <header class="top"><div class="wrap">
-  <h1>논술 기출 지도<button type="button" class="guidebtn" id="guideBtn">이용 가이드</button><button type="button" class="guidebtn" id="pickBtn">학교 다시 고르기</button><small>수리논술 · 생명논술 · 메디컬 46개교 기출을 공식 문항카드로 정리</small></h1>
+  <h1>논술 기출 지도<button type="button" class="guidebtn" id="guideBtn">이용 가이드</button><button type="button" class="guidebtn" id="pickBtn">학교 다시 고르기</button><span class="dlwrap"><button type="button" class="guidebtn" id="sheetBtn" aria-expanded="false" aria-controls="sheetMenu">답안지 다운로드</button><span class="dlmenu" id="sheetMenu" hidden role="group" aria-label="답안지 쪽 수"><span class="dlh">빈 답안지 PDF</span><button type="button" data-sp="1">1쪽</button><button type="button" data-sp="2">2쪽</button><button type="button" data-sp="3">3쪽</button><button type="button" data-sp="4">4쪽</button></span></span><small>수리논술 · 생명논술 · 메디컬 46개교 기출을 공식 문항카드로 정리</small></h1>
   <div class="stats" id="stats"><div><b>46</b>학교</div><div><b>2,945</b>문항</div><div><b>3,632</b>점수 기록</div></div>
 </div></header>
 <nav class="tabs" aria-label="보기"><div class="wrap">
@@ -1061,7 +1066,7 @@ async function openConcept(id){
 let CONCEPT_FILTER=null;
 /* 개념 글: 기초 개념 / 서술 / 기출 세 범주로 나누고, 위에 붙어 다니는 줄에서 소제목으로 바로 간다 */
 const CCATS=[['base','기초 개념'],['write','서술'],['past','기출']];
-const CSEC={'한눈에':'base','꼭 알아야 할 내용':'base','논술에서 쓰는 방식':'write','채점에서 깎이는 지점':'write','꼭 알면 좋은 팁':'past','대표 기출':'past','같이 보면 좋은 개념':'all'};
+const CSEC={'한눈에':'base','행동강령':'base','꼭 알아야 할 내용':'base','논술에서 쓰는 방식':'write','채점에서 깎이는 지점':'write','꼭 알면 좋은 팁':'past','대표 기출':'past','같이 보면 좋은 개념':'all'};
 function tabsH(){const t=document.querySelector('nav.tabs');return t?t.offsetHeight:50}
 function enhanceConcept(el){
   document.documentElement.style.setProperty('--tabsh',(tabsH()-1)+'px');
@@ -1431,7 +1436,8 @@ const STUDY=(()=>{
   function body(i){const x=lab(i);if(x.skip)return '<p class="note">해당 없음</p>';
     const r=rec.get(i.id);
     if(tab==='know'){let h=`<div class="sh">필수 개념${x.lv?`<span class="lv">난도 ${'●'.repeat(x.lv)}${'○'.repeat(3-x.lv)}</span>`:''}</div><div class="chips">${(x.c||[]).map(c=>`<a class="chip" href="#c-${esc(c)}">${esc(cName(c))}</a>`).join('')||'<span class="note">-</span>'}</div>`;
-      h+=`<div class="sh">필수 논리</div><div class="chips">${(x.t||[]).map(t=>`<span class="chip" title="${esc(tagDesc(t))}">${esc(tagName(t))}</span>`).join('')}</div>`;
+      const lg=t=>{const c=(CIDX||[]).find(z=>z.subj==='풀이 논리'&&z.tags.includes(t));return c?c.id:''};
+      h+=`<div class="sh">필수 논리</div><div class="chips">${(x.t||[]).map(t=>{const d=lg(t);return d?`<a class="chip" href="#c-${esc(d)}" title="${esc(tagDesc(t))} · 행동강령 보기">${esc(tagName(t))}</a>`:`<span class="chip" title="${esc(tagDesc(t))}">${esc(tagName(t))}</span>`}).join('')}</div>`;
       if(x.err&&x.err.length)h+=`<div class="sh">흔한 실수</div><ul class="err">${x.err.map(e=>`<li>${texInline(e)}</li>`).join('')}</ul>`;
       if(x.wr&&x.wr.length)h+=`<div class="sh">서술 주의사항</div><ul class="err wr">${x.wr.map(e=>`<li>${texInline(e)}</li>`).join('')}</ul>`;
       return h}
@@ -1588,12 +1594,17 @@ function onbGuide(){const box=$('#onbBox');const mine=[...FAV.d.s].map(sName);
    <li><span class="n">2</span><div><b>문제 카드에서 필기</b><p>문제를 열고 「필기」를 누르면 문제 위에 바로 쓰기, 연습장, 답안지 중에서 골라 쓸 수 있어요.</p></div></li>
    <li><span class="n">3</span><div><b>답안 쓰고 AI 채점 받기</b><p>웹 안의 답안지에 바로 쓰거나, 「종이 답안」에서 답안지 PDF를 받아 프린트하거나 패드에서 푼 뒤 사진·캡처를 올리면 돼요. AI가 그 학교의 채점 기준과 서술 주안점에 맞춰 채점해 줘요.</p></div></li>
    <li><span class="n">4</span><div><b>풀고 나서 추가 학습</b><p>오른쪽 「추가 학습」에서 관련 기출을 이어 풀고, 개념·논리를 익혀요. 단순 개념 정리가 아니라, 이전 기출에서 쓰인 특이한 발상과 자주 나오는 정석 논리를 미리 익히도록 모아 둔 거예요.</p></div></li>
+     <li><span class="n">5</span><div><b>앱처럼 쓰기</b><p>홈 화면에 바로가기를 만들면 앱처럼 열려요. 아이패드·아이폰은 Safari 공유 버튼 → 「홈 화면에 추가」, 안드로이드는 Chrome 메뉴 → 「홈 화면에 추가」(또는 「앱 설치」), 컴퓨터는 Chrome 주소창 오른쪽의 설치 아이콘을 누르면 돼요. 한 번 연 문제는 인터넷이 약해도 다시 열려요.</p></div></li>
   </ol>
   <div class="onb-foot"><button type="button" class="btn" id="onbPick2">학교 다시 고르기</button><button type="button" class="btn primary" id="onbGo">2027 대비로 가기</button></div>`;
   $('#onbPick2').onclick=()=>{onbPick()};$('#onbGo').onclick=()=>{onbClose();location.hash='prep'};setTimeout(()=>$('#onbGo').focus(),50)}
 function onbOpen(step){$('#onb').hidden=false;document.body.style.overflow='hidden';step==='guide'?onbGuide():onbPick()}
 $('#onb').addEventListener('click',e=>{if(e.target.id==='onb'&&!(ONBF&&$('#onbList')))onbClose()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#onb').hidden&&!(ONBF&&$('#onbList')))onbClose()});
+$('#sheetBtn').addEventListener('click',e=>{const m=$('#sheetMenu');m.hidden=!m.hidden;$('#sheetBtn').setAttribute('aria-expanded',String(!m.hidden))});
+document.addEventListener('click',e=>{if(!e.target.closest('.dlwrap')){$('#sheetMenu').hidden=true;$('#sheetBtn').setAttribute('aria-expanded','false')}});
+$('#sheetMenu').addEventListener('click',async e=>{const b=e.target.closest('[data-sp]');if(!b)return;const n=+b.dataset.sp;$('#sheetMenu').hidden=true;$('#sheetBtn').setAttribute('aria-expanded','false');
+  const btn=$('#sheetBtn'),t0=btn.textContent;btn.disabled=true;btn.textContent='만드는 중…';try{if(window.NSMBlankSheet)await NSMBlankSheet(n)}finally{btn.disabled=false;btn.textContent=t0}});
 $('#guideBtn').addEventListener('click',()=>onbOpen('guide'));$('#pickBtn').addEventListener('click',()=>onbOpen('pick'));
 function onbMaybe(){let seen=null;try{seen=localStorage.getItem('nsm:onb')}catch(e){}
   const sp=new URLSearchParams(location.search);
