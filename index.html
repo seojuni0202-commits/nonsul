@@ -146,7 +146,7 @@ h2{font-family:var(--f-display);font-size:1.35rem;margin:0 0 4px}
 .igrid .iall .psum{-webkit-line-clamp:2}
 .scard{width:100%;min-height:48px;text-align:left;background:var(--sheet);border:1px solid var(--line);border-radius:8px;padding:12px 38px 12px 14px;cursor:pointer;font:inherit;color:var(--ink);display:flex;align-items:center}
 .scard:hover,.scard:focus-visible{border-color:var(--blue)}
-.scard .nm{font-weight:600;font-size:.93rem;line-height:1.3;overflow-wrap:anywhere;min-width:0}
+.scard .nm{font-weight:600;font-size:.93rem;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;min-width:0}
 .igrid .sgstar{top:50%;transform:translateY(-50%);right:4px;font-size:1rem}
 @media (max-width:560px){.igrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .pcard .ptks{display:flex;gap:6px;flex-wrap:wrap}.pcard .ptks i{font-style:normal;font-size:.75rem;font-weight:600;color:var(--blue);background:var(--blue-soft);border-radius:999px;padding:2px 9px}
@@ -798,6 +798,8 @@ function sAlts(w){w=w.toLowerCase();const a=SAL[w]||[];const out=[w,...a];if(/�
 function sHit(hay,w){return sAlts(w).some(x=>hay.includes(x))}
 function itemHit(i,w){if(sHit(i._t,w))return true;if(w==='의대'||w==='의예'||w==='메디컬')return i._g.includes('M');if(w==='약대'||w==='약학')return i._g.includes('P');const x=sess(i);return !!(x&&sHit(x.l.toLowerCase(),w))}
 /* 기출 검색 첫 화면: 학교 카드(즐겨찾기 먼저) → 누르면 그 학교 문항 */
+// 작은 학교 카드용 짧은 이름(한 줄에 들어가게)
+const sName=n=>({'연세대학교_미래캠퍼스':'연세대 미래캠퍼스'})[n]||disp(n);
 function renderItemsHome(){
   if(!META||!ITEMS.length)return;const grid=$('#igrid');const q=$('#iq').value.trim().replace(/\s+/g,'').toLowerCase();
   const by={};ITEMS.forEach(i=>{if(!trOK(i))return;const o=by[i.s]||(by[i.s]={n:0,m:0,b:0,done:0,y0:9999,y1:0,med:false});o.n++;if(i.tr.startsWith('수리'))o.m++;else if(i.tr.includes('생명'))o.b++;const y=parseInt(i.y)||0;if(y){o.y0=Math.min(o.y0,y);o.y1=Math.max(o.y1,y)}if(/M|P/.test(i._g||''))o.med=true;if(rec.get(i.id).st==='done')o.done++});
@@ -808,7 +810,7 @@ function renderItemsHome(){
   const total=ITEMS_V.filter(trOK).length;
   const all=`<div class="swrap iallw"><button type="button" class="pcard iall" data-i="all"><span class="nm">전체 기출에서 찾기</span><span class="psum">${q&&!list.length?`"${esc($('#iq').value.trim())}"(으)로 모든 학교 기출을 검색해요.`:`학교를 가리지 않고 풀이 논리·단원·낱말로 찾아요 · ${total.toLocaleString()}문항`}</span></button></div>`;
   grid.innerHTML=all+list.map(x=>{const c=x.c,fv=FAV.has('s',x.n);
-    return `<div class="swrap"><span class="star sgstar${fv?' on':''}" data-istar="${esc(x.n)}" role="button" tabindex="0" aria-label="${fv?'즐겨찾기 해제':'즐겨찾기'}">${fv?'★':'☆'}</span><button type="button" class="scard" data-i="${x.id}" title="${c.n}문항${c.med?' · 의대·약대 시험 있음':''}"><span class="nm">${esc(disp(x.n))}</span></button></div>`}).join('');
+    return `<div class="swrap"><span class="star sgstar${fv?' on':''}" data-istar="${esc(x.n)}" role="button" tabindex="0" aria-label="${fv?'즐겨찾기 해제':'즐겨찾기'}">${fv?'★':'☆'}</span><button type="button" class="scard" data-i="${x.id}" title="${c.n}문항${c.med?' · 의대·약대 시험 있음':''}"><span class="nm">${esc(sName(x.n))}</span></button></div>`}).join('');
 }
 function showItems(arg){
   const home=!arg;$('#ihome').hidden=!home;$('#ilist').hidden=home;
@@ -1104,7 +1106,7 @@ function renderPrepGrid(){
   $('#pcount').textContent=q?list.length+'개 학교':'';
   if(!list.length){grid.innerHTML='<div class="empty">찾는 학교가 없어요. 대비 자료는 의대·약대 논술이 있는 '+PIDX2.length+'개 학교만 있어요.</div>';return}
   grid.innerHTML=list.map(x=>{const fv=FAV.has('s',x.n);const tk=(x.tracks||[]).map(k=>`<i>${esc(k.l)}</i>`).join('');
-    return `<div class="swrap"><span class="star sgstar${fv?' on':''}" data-pstar="${esc(x.n)}" role="button" tabindex="0" aria-label="${fv?'즐겨찾기 해제':'즐겨찾기'}">${fv?'★':'☆'}</span><button type="button" class="scard pcard2" data-p="${esc(x.id)}"><span class="nm">${esc(disp(x.n))}</span>${tk?`<span class="ptks">${tk}</span>`:''}</button></div>`}).join('');
+    return `<div class="swrap"><span class="star sgstar${fv?' on':''}" data-pstar="${esc(x.n)}" role="button" tabindex="0" aria-label="${fv?'즐겨찾기 해제':'즐겨찾기'}">${fv?'★':'☆'}</span><button type="button" class="scard pcard2" data-p="${esc(x.id)}"><span class="nm">${esc(sName(x.n))}</span>${tk?`<span class="ptks">${tk}</span>`:''}</button></div>`}).join('');
   typeset(grid);
 }
 $('#pq').addEventListener('input',()=>renderPrepGrid());
