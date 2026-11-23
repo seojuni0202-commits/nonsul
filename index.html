@@ -104,6 +104,18 @@ h2{font-family:var(--f-display);font-size:1.35rem;margin:0 0 4px}
 .dlmenu[hidden]{display:none}@media (max-width:560px){.dlmenu .dlh{display:none}.dlmenu button{padding:6px 10px}}.dlmenu .dlh{color:var(--muted);margin-right:4px}
 .dlmenu button{font:inherit;font-weight:600;border:1px solid var(--line);background:var(--sheet);border-radius:8px;padding:6px 12px;min-height:36px;cursor:pointer;color:var(--ink)}
 .dlmenu button:hover{border-color:var(--blue);color:var(--blue)}
+.askfab{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:30;font:inherit;font-weight:700;background:var(--blue);color:#fff;border:0;border-radius:999px;padding:12px 18px;min-height:48px;box-shadow:0 6px 18px rgba(39,84,197,.35);cursor:pointer}
+.askfab[hidden],.askp[hidden]{display:none}
+.askp{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:31;width:min(420px,calc(100vw - 32px));height:min(70vh,620px);background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.18);display:flex;flex-direction:column;overflow:hidden}
+.askh{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line)}.askh b{font-size:.98rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.askm{font-size:.78rem;color:var(--muted)}
+.askx{margin-left:auto;font:inherit;font-size:1.3rem;border:0;background:none;cursor:pointer;min-width:40px;min-height:40px;color:#4b5563}
+.asklog{flex:1;overflow:auto;padding:12px 14px;display:flex;flex-direction:column;gap:10px;font-size:.92rem;line-height:1.75}
+.asklog .q{align-self:flex-end;background:var(--blue-soft);border-radius:12px 12px 2px 12px;padding:8px 12px;max-width:85%;white-space:pre-wrap}
+.asklog .a{background:#f6f7f9;border-radius:12px 12px 12px 2px;padding:8px 12px;max-width:95%}.asklog .a p{margin:.3em 0}.asklog .a ul,.asklog .a ol{margin:.3em 0;padding-left:1.2em}
+.asklog .hint{color:var(--muted);font-size:.86rem}
+.askf{display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--line)}.askf textarea{flex:1;font:inherit;font-size:.92rem;border:1px solid var(--line);border-radius:8px;padding:8px 10px;resize:none}
+.askn{margin:0;padding:0 14px 10px;font-size:.76rem;color:var(--muted)}
+@media (max-width:560px){.askp{right:0;left:0;bottom:0;width:auto;height:75vh;border-radius:14px 14px 0 0}}
 .onb{position:fixed;inset:0;z-index:50;background:rgba(17,24,39,.42);display:flex;align-items:center;justify-content:center;padding:16px}
 .onb[hidden]{display:none}
 .onb-box{background:#fff;border-radius:14px;max-width:640px;width:100%;max-height:calc(100vh - 32px);overflow:auto;padding:24px;box-shadow:0 12px 40px rgba(0,0,0,.18)}
@@ -738,6 +750,11 @@ html{touch-action:manipulation;-webkit-text-size-adjust:100%}
   </div></div>
 </div>
 
+<button type="button" class="askfab" id="askFab" hidden aria-controls="askPanel" aria-expanded="false">개념 질문</button>
+<section class="askp" id="askPanel" hidden aria-label="개념 질문"><div class="askh"><b id="askTitle">개념 질문</b><span class="askm">개념에 대해서만 답해요</span><button type="button" class="askx" id="askClose" aria-label="닫기">×</button></div>
+<div class="asklog" id="askLog" aria-live="polite"></div>
+<form class="askf" id="askForm"><textarea id="askIn" rows="2" placeholder="예: 평균값 정리는 왜 닫힌구간 연속이 필요해?" aria-label="개념 질문"></textarea><button type="submit" class="btn" id="askGo">묻기</button></form>
+<p class="askn" id="askNote"></p></section>
 <div class="onb" id="onb" hidden role="dialog" aria-modal="true" aria-labelledby="onbT"><div class="onb-box" id="onbBox"></div></div>
 <footer><div class="wrap">각 대학의 선행학습 영향평가 보고서(문항카드), 입학처 자료집·입시결과를 바탕으로 정리했어요. “(추정)”이 붙은 부분과 예측은 기출 분석에서 나온 판단이고, 대학의 공식 정답이나 출제 정보가 아니에요. 원본 쪽 이미지는 대학 자료(무단 복제·전재 금지)라 개인 공부용으로만 쓰고 링크를 공유하지 마세요. 문항과 원본 쪽은 자동으로 연결해서 가끔 다른 쪽이 열릴 수 있어요. 정리 기준일 2026-11-21.</div></footer>
 
@@ -1064,7 +1081,7 @@ async function openConcept(id){
   if(!t){el.innerHTML=`<h1>${esc(c.t)}</h1><p class="note">이 개념 글은 아직 준비 중이에요. 범위: ${esc(c.scope)}</p>`;return}
   const n=ITEMS_V.filter(i=>i.tags.some(x=>c.tags.includes(x))).length;
   el.innerHTML=md(t,{toc:false})+(c.tags.length&&n?`<p style="margin-top:24px"><button type="button" class="btn" id="cToItems">이 개념을 쓴 기출 ${n.toLocaleString()}문항 보기 →</button></p>`:'');
-  enhanceConcept(el);typeset(el);const on=$('#clist .ci.on');if(on)on.scrollIntoView({block:'nearest'});
+  enhanceConcept(el);typeset(el);askSet(c,t);const on=$('#clist .ci.on');if(on)on.scrollIntoView({block:'nearest'});
   const b=$('#cToItems');if(b)b.onclick=()=>{CONCEPT_FILTER=c;location.hash='i-all';setTimeout(()=>{['#q','#fs','#fy','#fk','#fg','#ft','#fm'].forEach(x=>$(x).value='');applyItems()},0)};
 }
 let CONCEPT_FILTER=null;
@@ -1510,6 +1527,7 @@ function route(){
   const h=location.hash.slice(1)||'items';
   const v=h.startsWith('s-')?'school':h.startsWith('c-')?'concepts':h.startsWith('prep')?'prep':h.startsWith('i-')?'items':(['items','schools','concepts','graph','scores','overview'].includes(h)?h:'items');
   $$('main section').forEach(s=>s.hidden=s.id!=='v-'+v);
+  if(v!=='concepts'){const f=document.getElementById('askFab'),pn=document.getElementById('askPanel');if(f)f.hidden=true;if(pn)pn.hidden=true}else if(typeof ASK!=='undefined'&&ASK.id&&document.getElementById('askPanel').hidden)document.getElementById('askFab').hidden=false;
   $$('nav.tabs a').forEach(a=>a.removeAttribute('aria-current'));
   $$('nav.tabs a').forEach(a=>{if(a.dataset.v===(v==='school'?'schools':v))a.setAttribute('aria-current','page')});
   if(v==='items')showItems(h.startsWith('i-')?h.slice(2):null);
@@ -1602,7 +1620,7 @@ function onbGuide(){const box=$('#onbBox');const mine=[...FAV.d.s].map(sName);
    <li><span class="n">2</span><div><b>문제 카드에서 필기</b><p>문제를 열고 「필기」를 누르면 문제 위에 바로 쓰기, 연습장, 답안지 중에서 골라 쓸 수 있어요.</p></div></li>
    <li><span class="n">3</span><div><b>답안 쓰고 AI 채점 받기</b><p>웹 안의 답안지에 바로 쓰거나, 「종이 답안」에서 답안지 PDF를 받아 프린트하거나 패드에서 푼 뒤 사진·캡처를 올리면 돼요. AI가 그 학교의 채점 기준과 서술 주안점에 맞춰 채점해 줘요.</p></div></li>
    <li><span class="n">4</span><div><b>풀고 나서 추가 학습</b><p>오른쪽 「추가 학습」에서 관련 기출을 이어 풀고, 개념·논리를 익혀요. 단순 개념 정리가 아니라, 이전 기출에서 쓰인 특이한 발상과 자주 나오는 정석 논리를 미리 익히도록 모아 둔 거예요.</p></div></li>
-   <li><span class="n">5</span><div><b>풀이 논리 · 행동강령</b><p>「필수 개념」 탭 맨 위 「풀이 논리」에는 모든 기출에 쓰인 논리를 묶어 「이 조건이 보이면 → 이렇게 한다」 행동강령으로 정리해 뒀어요. 문제 화면의 필수 논리 칩을 누르면 그 행동강령으로 바로 가요.</p></div></li>
+   <li><span class="n">5</span><div><b>풀이 논리 · 행동강령</b><p>「필수 개념」 탭 맨 위 「풀이 논리」에는 모든 기출에 쓰인 논리를 묶어 「이 조건이 보이면 → 이렇게 한다」 행동강령으로 정리해 뒀어요. 문제 화면의 필수 논리 칩을 누르면 그 행동강령으로 바로 가요. 개념 글을 보다가 오른쪽 아래 「개념 질문」을 누르면 그 개념에 대해 AI에게 물어볼 수 있어요(인터넷 필요).</p></div></li>
      <li><span class="n">6</span><div><b>앱처럼 쓰기</b><p>홈 화면에 바로가기를 만들면 앱처럼 열려요. 아이패드·아이폰은 Safari 공유 버튼 → 「홈 화면에 추가」, 안드로이드는 Chrome 메뉴 → 「홈 화면에 추가」(또는 「앱 설치」), 컴퓨터는 Chrome 주소창 오른쪽의 설치 아이콘을 누르면 돼요. 맨 위 「오프라인 저장」을 한 번 누르면 모든 문제·그림·해설이 기기에 받아져, 인터넷 없이도 다 열려요(AI 채점만 인터넷 필요). 안드로이드는 <a href="app/nonsul.apk" download>앱 파일(APK)</a>을 받아 설치할 수도 있어요.</p></div></li>
   </ol>
   <div class="onb-foot"><button type="button" class="btn" id="onbPick2">학교 다시 고르기</button><button type="button" class="btn primary" id="onbGo">2027 대비로 가기</button></div>`;
@@ -1639,6 +1657,39 @@ async function offlineSave(){
   const d=new Date();try{localStorage.setItem('nsm:offline',`${d.getMonth()+1}월 ${d.getDate()}일`)}catch(e){}offLabel();
   alert('다 받았어요. 이제 인터넷이 없어도 모든 문제·그림·해설·문서가 열려요. (AI 채점만 인터넷이 필요해요)\n자료가 새로 올라오면 이 버튼을 다시 눌러 최신으로 받으세요.')}
 $('#offBtn').addEventListener('click',offlineSave);offLabel();
+
+// 개념 질문: 필수 개념 탭에서 지금 보는 개념 글을 근거로 개념만 묻고 답한다(AI 채점과 같은 키·예산)
+let ASK={id:null,t:'',doc:'',ctl:null};
+function askLoad(id){try{return JSON.parse(localStorage.getItem('nsm:ask:'+id)||'[]')}catch(e){return []}}
+function askSave(id,h){try{localStorage.setItem('nsm:ask:'+id,JSON.stringify(h.slice(-12)))}catch(e){}}
+function askDraw(){const h=askLoad(ASK.id),L=$('#askLog');
+  L.innerHTML=h.length?h.map(m=>m.role==='user'?`<div class="q">${esc(m.content)}</div>`:`<div class="a">${md(m.content,{toc:false})}</div>`).join(''):`<p class="hint">「${esc(ASK.t)}」에 대해 궁금한 것을 물어보세요. 정의·정리가 왜 성립하는지, 언제 쓰는지, 헷갈리는 점처럼 개념에 대한 질문에 답해요. 기출 문제 풀이 전체는 대신 풀어 주지 않아요.</p>`;
+  typeset(L);L.scrollTop=L.scrollHeight}
+function askSet(c,doc){ASK.id=c.id;ASK.t=c.t;ASK.doc=doc||'';$('#askTitle').textContent='개념 질문 · '+c.t;$('#askFab').hidden=false;if(!$('#askPanel').hidden)askDraw()}
+function askOpen(on){$('#askPanel').hidden=!on;$('#askFab').hidden=on||!ASK.id;$('#askFab').setAttribute('aria-expanded',String(on));if(on){askDraw();setTimeout(()=>$('#askIn').focus(),50)}}
+$('#askFab').addEventListener('click',()=>askOpen(true));$('#askClose').addEventListener('click',()=>askOpen(false));
+$('#askIn').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();$('#askForm').requestSubmit()}});
+$('#askForm').addEventListener('submit',async e=>{e.preventDefault();const q=$('#askIn').value.trim();if(!q||ASK.ctl)return;
+  if(!navigator.onLine){$('#askNote').textContent='개념 질문은 인터넷이 필요해요.';return}
+  if(!window.NSMAsk){$('#askNote').textContent='질문 기능을 아직 불러오지 못했어요. 잠시 뒤 다시 눌러 주세요.';return}
+  const h=askLoad(ASK.id);h.push({role:'user',content:q});askSave(ASK.id,h);$('#askIn').value='';askDraw();
+  const L=$('#askLog');const wait=document.createElement('div');wait.className='a hint';wait.textContent='생각하는 중…';L.appendChild(wait);L.scrollTop=L.scrollHeight;
+  const sys=`너는 의대 수리논술을 준비하는 고3의 개념 튜터다. 학생은 「${ASK.t}」 개념 글을 보며 질문한다. 규칙:
+- 개념에 대한 질문에만 답한다: 정의·정리의 뜻, 왜 성립하는지, 쓰는 조건과 함정, 다른 개념과의 차이, 짧은 예시, 답안에 쓰는 근거 문장.
+- 특정 기출·시험 문제를 통째로 풀어 달라고 하면 풀지 말고, 그 문제에 쓰이는 개념과 첫 단계 방향만 짧게 알려 준다.
+- 수학·과학 개념과 무관한 질문에는 개념 질문만 받는다고 한 줄로 답한다.
+- 고등학교 교육과정 범위에서 설명하고, 확실하지 않으면 그렇다고 말한다.
+- 한국어로, 핵심부터 짧게(대개 12줄 이내). 수식은 $…$ LaTeX, 분수는 \\frac, 따로 선 식은 $$…$$.
+아래는 이 사이트의 개념 글이다. 근거로 쓰되 글에 없는 내용도 교과 범위에서 설명해도 된다.
+<개념글>
+${ASK.doc.slice(0,14000)}
+</개념글>`;
+  ASK.ctl=new AbortController();$('#askGo').disabled=true;
+  const r=await window.NSMAsk(sys,h.slice(-8).map(m=>({role:m.role,content:m.content})),ASK.ctl.signal);ASK.ctl=null;$('#askGo').disabled=false;wait.remove();
+  if(r.err){const M={nokey:'AI 키가 없어요. 문제 화면의 필기 → AI 채점에서 「API 키 넣기」로 키를 넣어 주세요.',nobudget:'AI 예산이 정해지지 않았어요. 필기 → AI 채점 → 키·예산 설정에서 예산을 넣어 주세요.',budget:`남은 AI 예산(${r.left}원)이 부족해요.`,key:'AI 키가 맞지 않아요.',rate:'요청이 많아요. 잠시 뒤 다시 물어봐 주세요.',net:'인터넷에 연결하지 못했어요.',abort:'멈췄어요.',http:'답을 받지 못했어요. '+(r.msg||'')};
+    const h2=askLoad(ASK.id);h2.pop();askSave(ASK.id,h2);$('#askIn').value=q;askDraw();$('#askNote').textContent=M[r.err]||'답을 받지 못했어요.';return}
+  const h3=askLoad(ASK.id);h3.push({role:'assistant',content:r.text||'(빈 답)'});askSave(ASK.id,h3);askDraw();
+  $('#askNote').textContent=`이번 질문 약 ${r.cost}원 · 남은 AI 예산 ${r.left}원`});
 $('#guideBtn').addEventListener('click',()=>onbOpen('guide'));$('#pickBtn').addEventListener('click',()=>onbOpen('pick'));
 function onbMaybe(){let seen=null;try{seen=localStorage.getItem('nsm:onb')}catch(e){}
   // 이 기능 전에 학교를 고른 기기: 지금 즐겨찾기를 준비 학교로 본다
