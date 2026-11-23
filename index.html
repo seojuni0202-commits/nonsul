@@ -904,9 +904,11 @@ async function fillPv(el){
   if(window.MathJax&&MathJax.typesetPromise){try{await MathJax.typesetPromise([d])}catch(e){}}
 }
 // 즐겨찾기(학교·풀이 논리) — 이 기기에 저장
+const MYS=()=>{try{return new Set(JSON.parse(localStorage.getItem('nsm:my')||'[]'))}catch(e){return new Set()}};
 const FAV={d:(()=>{try{const x=JSON.parse(localStorage.getItem('fav')||'{}');return {s:new Set(x.s||[]),t:new Set(x.t||[])}}catch(e){return {s:new Set(),t:new Set()}}})(),
   has(k,v){return this.d[k].has(v)},
-  toggle(k,v){this.d[k].has(v)?this.d[k].delete(v):this.d[k].add(v);try{localStorage.setItem('fav',JSON.stringify({s:[...this.d.s],t:[...this.d.t]}))}catch(e){};
+  // 처음에 고른 준비 학교(nsm:my)는 즐겨찾기에서 뺄 수 없다 → '학교 다시 고르기'에서만 바꾼다
+  toggle(k,v){if(k==='s'&&this.d.s.has(v)&&MYS().has(v)){alert('준비 학교로 고른 학교라 즐겨찾기에서 뺄 수 없어요. 바꾸려면 맨 위 「학교 다시 고르기」를 눌러 주세요.');return}this.d[k].has(v)?this.d[k].delete(v):this.d[k].add(v);try{localStorage.setItem('fav',JSON.stringify({s:[...this.d.s],t:[...this.d.t]}))}catch(e){};
     if(typeof renderSchoolGrid==='function'&&META){renderSchoolGrid();if(!$('#ihome').hidden)renderItemsHome();if(typeof renderPrepGrid==='function'&&PIDX2&&!$('#pgrid').hidden)renderPrepGrid()}if(['favs','favt'].includes($('#fsort').value))applyItems()}};
 // 검색되는 선택 칸
 const CBX=[];
@@ -1574,7 +1576,7 @@ Promise.all(['meta.json','items.json','scores_idx.json','hide.json','idmap.json'
 let ONBF=false; // 처음 들어온 기기: 학교를 고르기 전에는 닫을 수 없음
 function onbSave(){try{localStorage.setItem('nsm:onb','1')}catch(e){}}
 function onbClose(){if(ONBF&&!FAV.d.s.size)return;ONBF=false;$('#onb').hidden=true;document.body.style.overflow='';onbSave();const g=$('#guideBtn');if(g)g.focus()}
-function onbPick(){const box=$('#onbBox');const sel=new Set(FAV.d.s);
+function onbPick(){const box=$('#onbBox');const sel=new Set(MYS().size?MYS():FAV.d.s);
   const names=META.schools.map(s=>s.n).sort((a,b)=>disp(a).localeCompare(disp(b),'ko'));
   box.innerHTML=`<h3 id="onbT">어느 학교를 준비하나요?</h3><p class="sub">고른 학교는 이 기기에서 즐겨찾기로 저장돼 목록 맨 앞에 나와요. 나중에 별표로 바꿀 수 있어요.</p>
   <input type="search" id="onbQ" placeholder="학교 이름 (예: 한양, 성대, 카대)" aria-label="학교 이름으로 찾기" autocomplete="off">
@@ -1589,7 +1591,9 @@ function onbPick(){const box=$('#onbBox');const sel=new Set(FAV.d.s);
   draw();$('#onbQ').addEventListener('input',draw);
   $('#onbList').addEventListener('click',e=>{const b=e.target.closest('[data-n]');if(!b)return;const n=b.dataset.n;sel.has(n)?sel.delete(n):sel.add(n);draw()});
   if($('#onbCancel'))$('#onbCancel').onclick=onbClose;
-  $('#onbNext').onclick=()=>{if(!sel.size)return;for(const n of names){if(sel.has(n)!==FAV.has('s',n))FAV.toggle('s',n)}if(ONBF)onbGuide();else onbClose()};
+  $('#onbNext').onclick=()=>{if(!sel.size)return;const prev=MYS();try{localStorage.setItem('nsm:my','[]')}catch(e){}
+    for(const n of names){if(sel.has(n)&&!FAV.has('s',n))FAV.toggle('s',n);else if(!sel.has(n)&&prev.has(n)&&FAV.has('s',n))FAV.toggle('s',n)}
+    try{localStorage.setItem('nsm:my',JSON.stringify([...sel]))}catch(e){}if(ONBF)onbGuide();else onbClose()};
   setTimeout(()=>$('#onbQ').focus(),50)}
 function onbGuide(){const box=$('#onbBox');const mine=[...FAV.d.s].map(sName);
   box.innerHTML=`<h3 id="onbT">이렇게 쓰면 돼요</h3>${mine.length?`<p class="onb-mine">즐겨찾기: ${esc(mine.join(', '))}</p>`:''}
@@ -1637,6 +1641,8 @@ async function offlineSave(){
 $('#offBtn').addEventListener('click',offlineSave);offLabel();
 $('#guideBtn').addEventListener('click',()=>onbOpen('guide'));$('#pickBtn').addEventListener('click',()=>onbOpen('pick'));
 function onbMaybe(){let seen=null;try{seen=localStorage.getItem('nsm:onb')}catch(e){}
+  // 이 기능 전에 학교를 고른 기기: 지금 즐겨찾기를 준비 학교로 본다
+  try{if(seen&&localStorage.getItem('nsm:my')===null)localStorage.setItem('nsm:my',JSON.stringify([...FAV.d.s]))}catch(e){}
   const sp=new URLSearchParams(location.search);
   // 자동 점검 브라우저에서는 ?onb 가 있을 때만 띄운다
   if(navigator.webdriver&&!sp.has('onb'))return;
