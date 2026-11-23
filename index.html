@@ -1304,6 +1304,8 @@ function examTeX(x){
     o+=x[i]}x=o}
   x=x.replace(/\\left\s*\(([^()]*?\\tfrac[^()]*?)\\right\s*\)/g,'($1)');
   x=x.replace(/\\(lim|sum|prod)(?!\\limits)\s*(?=[_^])/g,'\\$1\\limits');
+  // 본문 속 적분 기호는 글자 크기라 작아 보인다 → 기호만 큰 꼴(끝값은 오른쪽)으로
+  x=x.replace(/\\(iint|oint|int)(?![a-zA-Z])(\s*\\(?:no)?limits)?/g,(m,c,l)=>'\\mathop{\\displaystyle\\'+c+'}'+(l?l.trim():'\\nolimits'));
   // 분수 인자 하나의 끝: {…} 묶음, \명령, 또는 글자 하나(\frac{a}2 처럼 중괄호 없는 인자도 TeX에서 맞는 식)
   const grp=(s,j)=>{let e=0;for(let k=j;k<s.length;k++){if(s[k]==='{')e++;else if(s[k]==='}'&&--e===0)return k+1}return s.length};
   const arg=(s,j)=>{while(s[j]===' ')j++;if(s[j]==='{')return grp(s,j);if(s[j]==='\\'){let k=j+1;if(/[a-zA-Z]/.test(s[k]||'')){while(/[a-zA-Z]/.test(s[k]||''))k++}else k++;return k}return Math.min(j+1,s.length)};
