@@ -95,6 +95,25 @@ section[hidden]{display:none}
 [hidden]{display:none!important}
 h2{font-family:var(--f-display);font-size:1.35rem;margin:0 0 4px}
 .lede{color:var(--muted);margin:0 0 16px;max-width:70ch}
+/* 처음 들어온 기기: 학교 고르기 → 이용 가이드 */
+.guidebtn{font:inherit;font-size:.8rem;font-weight:600;margin-left:12px;vertical-align:middle;border:1px solid var(--line);background:var(--sheet);color:var(--blue);border-radius:999px;padding:4px 12px;min-height:32px;cursor:pointer}
+.onb{position:fixed;inset:0;z-index:50;background:rgba(17,24,39,.42);display:flex;align-items:center;justify-content:center;padding:16px}
+.onb[hidden]{display:none}
+.onb-box{background:#fff;border-radius:14px;max-width:640px;width:100%;max-height:calc(100vh - 32px);overflow:auto;padding:24px;box-shadow:0 12px 40px rgba(0,0,0,.18)}
+.onb-box h3{margin:0 0 6px;font-size:1.25rem}.onb-box .sub{margin:0 0 14px;color:var(--muted)}
+.onb-box input[type=search]{width:100%;font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:8px;margin-bottom:12px}
+.onb-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;max-height:42vh;overflow:auto;padding:2px}
+.onb-list button{font:inherit;font-size:.9rem;text-align:left;border:1px solid var(--line);background:var(--sheet);border-radius:8px;padding:9px 10px;min-height:42px;cursor:pointer;color:var(--ink)}
+.onb-list button[aria-pressed="true"]{border-color:var(--blue);background:var(--blue-soft);color:var(--blue);font-weight:600}
+.onb-foot{display:flex;gap:8px;justify-content:flex-end;align-items:center;margin-top:16px;flex-wrap:wrap}
+.onb-foot .cnt{margin-right:auto;color:var(--muted);font-size:.88rem}
+.onb-steps{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:14px}
+.onb-steps li{display:flex;gap:12px;align-items:flex-start}
+.onb-steps .n{flex:none;width:26px;height:26px;border-radius:50%;background:var(--blue);color:#fff;font-weight:700;font-size:.85rem;display:flex;align-items:center;justify-content:center;margin-top:2px}
+.onb-steps b{display:block;margin-bottom:2px}.onb-steps p{margin:0;line-height:1.65;color:#374151;font-size:.93rem}
+.onb-mine{margin:0 0 14px;font-size:.9rem;color:var(--muted)}
+.onb-foot .primary{background:var(--blue);color:#fff;border-color:var(--blue)}
+
 .filters{display:flex;flex-wrap:wrap;gap:10px;align-items:end;background:var(--sheet);border:1px solid var(--line);border-radius:8px;padding:12px}
 .filters label{display:flex;flex-direction:column;gap:3px;font-size:.75rem;color:var(--muted);letter-spacing:.02em}
 .filters input[type=search],.filters select{font:inherit;font-size:.9rem;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:6px 8px;min-width:0}
@@ -547,7 +566,7 @@ html{touch-action:manipulation;-webkit-text-size-adjust:100%}
 </style>
 
 <header class="top"><div class="wrap">
-  <h1>논술 기출 지도<small>수리논술 · 생명논술 · 메디컬 46개교 기출을 공식 문항카드로 정리</small></h1>
+  <h1>논술 기출 지도<button type="button" class="guidebtn" id="guideBtn">이용 가이드</button><small>수리논술 · 생명논술 · 메디컬 46개교 기출을 공식 문항카드로 정리</small></h1>
   <div class="stats" id="stats"><div><b>46</b>학교</div><div><b>2,945</b>문항</div><div><b>3,632</b>점수 기록</div></div>
 </div></header>
 <nav class="tabs" aria-label="보기"><div class="wrap">
@@ -712,6 +731,7 @@ html{touch-action:manipulation;-webkit-text-size-adjust:100%}
   </div></div>
 </div>
 
+<div class="onb" id="onb" hidden role="dialog" aria-modal="true" aria-labelledby="onbT"><div class="onb-box" id="onbBox"></div></div>
 <footer><div class="wrap">각 대학의 선행학습 영향평가 보고서(문항카드), 입학처 자료집·입시결과를 바탕으로 정리했어요. “(추정)”이 붙은 부분과 예측은 기출 분석에서 나온 판단이고, 대학의 공식 정답이나 출제 정보가 아니에요. 원본 쪽 이미지는 대학 자료(무단 복제·전재 금지)라 개인 공부용으로만 쓰고 링크를 공유하지 마세요. 문항과 원본 쪽은 자동으로 연결해서 가끔 다른 쪽이 열릴 수 있어요. 정리 기준일 2026-11-21.</div></footer>
 
 <script>window.MathJax={tex:{inlineMath:[["\\(","\\)"]],displayMath:[["\\[","\\]"]]},svg:{fontCache:"global"},startup:{typeset:false}};</script>
@@ -1524,6 +1544,7 @@ Promise.all(['meta.json','items.json','scores_idx.json','hide.json','idmap.json'
   fillSel('#ss',[...PUB].sort(),disp);
   fillSel('#sy',SCIDX.years||[]);
   const saved=store.get('tr');if(saved&&saved!=='all'){const b=$(`.seg button[data-tr="${saved}"]`);if(b){TR=saved;$$('.seg button').forEach(x=>x.setAttribute('aria-pressed',x===b))}}
+  setTimeout(onbMaybe,300);
   $('#stats').innerHTML=`<div><b>${META.schools.length}</b>학교</div><div><b>${ITEMS.length.toLocaleString()}</b>문항</div><div><b>${PUB.size}</b>점수 공개 학교</div>`;
   ['#fs','#fk','#fg','#ft','#fy','#fm'].forEach(x=>enhanceSelect($(x)));
   // 이 탭에서 쓰던 검색·필터 되살리기
@@ -1538,6 +1559,44 @@ Promise.all(['meta.json','items.json','scores_idx.json','hide.json','idmap.json'
 }).catch(e=>{$('#cards').innerHTML='<div class="empty">데이터를 불러오지 못했어요. 새로고침해 보세요.</div>'});
 
 /* 필기·타이머·AI 채점(ink.js)에 넘기는 작은 API */
+
+// 처음 들어온 기기: 준비하는 학교를 묻고(즐겨찾기로 저장) → 이용 가이드
+function onbSave(){try{localStorage.setItem('nsm:onb','1')}catch(e){}}
+function onbClose(){$('#onb').hidden=true;document.body.style.overflow='';onbSave();const g=$('#guideBtn');if(g)g.focus()}
+function onbPick(){const box=$('#onbBox');const sel=new Set(FAV.d.s);
+  const names=META.schools.map(s=>s.n).sort((a,b)=>disp(a).localeCompare(disp(b),'ko'));
+  box.innerHTML=`<h3 id="onbT">어느 학교를 준비하나요?</h3><p class="sub">고른 학교는 이 기기에서 즐겨찾기로 저장돼 목록 맨 앞에 나와요. 나중에 별표로 바꿀 수 있어요.</p>
+  <input type="search" id="onbQ" placeholder="학교 이름 (예: 한양, 성대, 카대)" aria-label="학교 이름으로 찾기" autocomplete="off">
+  <div class="onb-list" id="onbList" role="group" aria-label="학교 고르기"></div>
+  <div class="onb-foot"><span class="cnt" id="onbCnt"></span><button type="button" class="btn" id="onbSkip">나중에 고르기</button><button type="button" class="btn primary" id="onbNext">다음</button></div>`;
+  const draw=()=>{const q=$('#onbQ').value.replace(/\s+/g,'').toLowerCase();
+    $('#onbList').innerHTML=names.filter(n=>!q||sHit(disp(n).replace(/\s+/g,'').toLowerCase(),q)||disp(n).replace(/\s+/g,'').toLowerCase().includes(q)).map(n=>`<button type="button" data-n="${esc(n)}" aria-pressed="${sel.has(n)}">${esc(sName(n))}</button>`).join('')||'<p class="note">찾는 학교가 없어요.</p>';
+    $('#onbCnt').textContent=sel.size?sel.size+'개 학교 선택':'여러 개 골라도 돼요'};
+  draw();$('#onbQ').addEventListener('input',draw);
+  $('#onbList').addEventListener('click',e=>{const b=e.target.closest('[data-n]');if(!b)return;const n=b.dataset.n;sel.has(n)?sel.delete(n):sel.add(n);b.setAttribute('aria-pressed',sel.has(n));$('#onbCnt').textContent=sel.size?sel.size+'개 학교 선택':'여러 개 골라도 돼요'});
+  $('#onbSkip').onclick=()=>onbGuide();
+  $('#onbNext').onclick=()=>{for(const n of names){if(sel.has(n)!==FAV.has('s',n))FAV.toggle('s',n)}onbGuide()};
+  setTimeout(()=>$('#onbQ').focus(),50)}
+function onbGuide(){const box=$('#onbBox');const mine=[...FAV.d.s].map(sName);
+  box.innerHTML=`<h3 id="onbT">이렇게 쓰면 돼요</h3>${mine.length?`<p class="onb-mine">즐겨찾기: ${esc(mine.join(', '))}</p>`:''}
+  <ol class="onb-steps">
+   <li><span class="n">1</span><div><b>2027 대비 탭부터</b><p>학교와 계열(의예·약학·자연)을 고르면 올해 나올 유형·논리 예측과, 시험 전에 꼭 풀어야 할 기출이 1·2·3순위로 정리돼 있어요. 여기부터 확인하세요.</p></div></li>
+   <li><span class="n">2</span><div><b>문제 카드에서 필기</b><p>문제를 열고 「필기」를 누르면 문제 위에 바로 쓰기, 연습장, 답안지 중에서 골라 쓸 수 있어요.</p></div></li>
+   <li><span class="n">3</span><div><b>답안 쓰고 AI 채점 받기</b><p>웹 안의 답안지에 바로 쓰거나, 「종이 답안」에서 답안지 PDF를 받아 프린트하거나 패드에서 푼 뒤 사진·캡처를 올리면 돼요. AI가 그 학교의 채점 기준과 서술 주안점에 맞춰 채점해 줘요.</p></div></li>
+   <li><span class="n">4</span><div><b>풀고 나서 추가 학습</b><p>오른쪽 「추가 학습」에서 관련 기출을 이어 풀고, 개념·논리를 익혀요. 단순 개념 정리가 아니라, 이전 기출에서 쓰인 특이한 발상과 자주 나오는 정석 논리를 미리 익히도록 모아 둔 거예요.</p></div></li>
+  </ol>
+  <div class="onb-foot"><button type="button" class="btn" id="onbPick2">학교 다시 고르기</button><button type="button" class="btn primary" id="onbGo">2027 대비로 가기</button></div>`;
+  $('#onbPick2').onclick=onbPick;$('#onbGo').onclick=()=>{onbClose();location.hash='prep'};setTimeout(()=>$('#onbGo').focus(),50)}
+function onbOpen(step){$('#onb').hidden=false;document.body.style.overflow='hidden';step==='guide'?onbGuide():onbPick()}
+$('#onb').addEventListener('click',e=>{if(e.target.id==='onb')onbClose()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#onb').hidden)onbClose()});
+$('#guideBtn').addEventListener('click',()=>onbOpen('guide'));
+function onbMaybe(){let seen=null;try{seen=localStorage.getItem('nsm:onb')}catch(e){}
+  const sp=new URLSearchParams(location.search);
+  // 자동 점검 브라우저에서는 ?onb 가 있을 때만 띄운다
+  if(navigator.webdriver&&!sp.has('onb'))return;
+  if(!seen&&!sp.has('q'))onbOpen('pick')}
+
 window.NSM={cur:()=>svCur,open:id=>openSolve(id),orig:id=>ORIG[id],
   title:id=>cardTitle(ITEMS[id]),n:()=>ITEMS.length,
   info:i=>({school:disp(i.s),s:i.s,year:i.y,k:i.k,q:i.q,g:i.g}),
