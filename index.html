@@ -24,6 +24,8 @@
     return [...s].map(b=>b.toString(16).padStart(2,'0')).join('').slice(0,24);
   }
   const realFetch=window.fetch.bind(window);
+  // 오프라인 저장용: 데이터 파일 경로 → 암호화된 파일 주소
+  window.__encUrl=async p=>new URL('e/'+(await nameOf(p))+'.bin',location.href).href;
   window.fetch=async function(input,init){
     const url=typeof input==='string'?input:input.url;
     if(/^[a-z]+:|^\/\//i.test(url))return realFetch(input,init);
@@ -571,7 +573,7 @@ html{touch-action:manipulation;-webkit-text-size-adjust:100%}
 </style>
 
 <header class="top"><div class="wrap">
-  <h1>논술 기출 지도<button type="button" class="guidebtn" id="guideBtn">이용 가이드</button><button type="button" class="guidebtn" id="pickBtn">학교 다시 고르기</button><span class="dlwrap"><button type="button" class="guidebtn" id="sheetBtn" aria-expanded="false" aria-controls="sheetMenu">답안지 다운로드</button><span class="dlmenu" id="sheetMenu" hidden role="group" aria-label="답안지 쪽 수"><span class="dlh">빈 답안지 PDF</span><button type="button" data-sp="1">1쪽</button><button type="button" data-sp="2">2쪽</button><button type="button" data-sp="3">3쪽</button><button type="button" data-sp="4">4쪽</button></span></span><small>수리논술 · 생명논술 · 메디컬 46개교 기출을 공식 문항카드로 정리</small></h1>
+  <h1>논술 기출 지도<button type="button" class="guidebtn" id="guideBtn">이용 가이드</button><button type="button" class="guidebtn" id="pickBtn">학교 다시 고르기</button><button type="button" class="guidebtn" id="offBtn" title="모든 문제·그림·해설을 이 기기에 받아 두면 인터넷 없이도 열려요">오프라인 저장</button><span class="dlwrap"><button type="button" class="guidebtn" id="sheetBtn" aria-expanded="false" aria-controls="sheetMenu">답안지 다운로드</button><span class="dlmenu" id="sheetMenu" hidden role="group" aria-label="답안지 쪽 수"><span class="dlh">빈 답안지 PDF</span><button type="button" data-sp="1">1쪽</button><button type="button" data-sp="2">2쪽</button><button type="button" data-sp="3">3쪽</button><button type="button" data-sp="4">4쪽</button></span></span><small>수리논술 · 생명논술 · 메디컬 46개교 기출을 공식 문항카드로 정리</small></h1>
   <div class="stats" id="stats"><div><b>46</b>학교</div><div><b>2,945</b>문항</div><div><b>3,632</b>점수 기록</div></div>
 </div></header>
 <nav class="tabs" aria-label="보기"><div class="wrap">
@@ -1129,7 +1131,7 @@ function renderPrepGrid(){
   const qn=AL[q]||q;
   const list=PIDX2.filter(x=>{const hay=(x.n+disp(x.n)).replace(/\s+/g,'').toLowerCase();return !q||hay.includes(qn)||sHit(hay,q)}).sort((a,b)=>(FAV.d.s.has(b.n)-FAV.d.s.has(a.n))||disp(a.n).localeCompare(disp(b.n),'ko'));
   $('#pcount').textContent=q?list.length+'개 학교':'';
-  if(!list.length){grid.innerHTML='<div class="empty">찾는 학교가 없어요. 대비 자료는 의대·약대 논술이 있는 '+PIDX2.length+'개 학교만 있어요.</div>';return}
+  if(!list.length){grid.innerHTML='<div class="empty">찾는 학교가 없어요. 대비 자료는 '+PIDX2.length+'개 학교에 있어요.</div>';return}
   grid.innerHTML=list.map(x=>{const fv=FAV.has('s',x.n);const tk=(x.tracks||[]).map(k=>`<i>${esc(k.l)}</i>`).join('');
     return `<div class="swrap"><span class="star sgstar${fv?' on':''}" data-pstar="${esc(x.n)}" role="button" tabindex="0" aria-label="${fv?'즐겨찾기 해제':'즐겨찾기'}">${fv?'★':'☆'}</span><button type="button" class="scard pcard2" data-p="${esc(x.id)}"><span class="nm">${esc(sName(x.n))}</span>${tk?`<span class="ptks">${tk}</span>`:''}</button></div>`}).join('');
   typeset(grid);
@@ -1597,7 +1599,7 @@ function onbGuide(){const box=$('#onbBox');const mine=[...FAV.d.s].map(sName);
    <li><span class="n">3</span><div><b>답안 쓰고 AI 채점 받기</b><p>웹 안의 답안지에 바로 쓰거나, 「종이 답안」에서 답안지 PDF를 받아 프린트하거나 패드에서 푼 뒤 사진·캡처를 올리면 돼요. AI가 그 학교의 채점 기준과 서술 주안점에 맞춰 채점해 줘요.</p></div></li>
    <li><span class="n">4</span><div><b>풀고 나서 추가 학습</b><p>오른쪽 「추가 학습」에서 관련 기출을 이어 풀고, 개념·논리를 익혀요. 단순 개념 정리가 아니라, 이전 기출에서 쓰인 특이한 발상과 자주 나오는 정석 논리를 미리 익히도록 모아 둔 거예요.</p></div></li>
    <li><span class="n">5</span><div><b>풀이 논리 · 행동강령</b><p>「필수 개념」 탭 맨 위 「풀이 논리」에는 모든 기출에 쓰인 논리를 묶어 「이 조건이 보이면 → 이렇게 한다」 행동강령으로 정리해 뒀어요. 문제 화면의 필수 논리 칩을 누르면 그 행동강령으로 바로 가요.</p></div></li>
-     <li><span class="n">6</span><div><b>앱처럼 쓰기</b><p>홈 화면에 바로가기를 만들면 앱처럼 열려요. 아이패드·아이폰은 Safari 공유 버튼 → 「홈 화면에 추가」, 안드로이드는 Chrome 메뉴 → 「홈 화면에 추가」(또는 「앱 설치」), 컴퓨터는 Chrome 주소창 오른쪽의 설치 아이콘을 누르면 돼요. 한 번 연 문제는 인터넷이 약해도 다시 열려요. 안드로이드는 <a href="app/nonsul.apk" download>앱 파일(APK)</a>을 받아 설치할 수도 있어요.</p></div></li>
+     <li><span class="n">6</span><div><b>앱처럼 쓰기</b><p>홈 화면에 바로가기를 만들면 앱처럼 열려요. 아이패드·아이폰은 Safari 공유 버튼 → 「홈 화면에 추가」, 안드로이드는 Chrome 메뉴 → 「홈 화면에 추가」(또는 「앱 설치」), 컴퓨터는 Chrome 주소창 오른쪽의 설치 아이콘을 누르면 돼요. 맨 위 「오프라인 저장」을 한 번 누르면 모든 문제·그림·해설이 기기에 받아져, 인터넷 없이도 다 열려요(AI 채점만 인터넷 필요). 안드로이드는 <a href="app/nonsul.apk" download>앱 파일(APK)</a>을 받아 설치할 수도 있어요.</p></div></li>
   </ol>
   <div class="onb-foot"><button type="button" class="btn" id="onbPick2">학교 다시 고르기</button><button type="button" class="btn primary" id="onbGo">2027 대비로 가기</button></div>`;
   $('#onbPick2').onclick=()=>{onbPick()};$('#onbGo').onclick=()=>{onbClose();location.hash='prep'};setTimeout(()=>$('#onbGo').focus(),50)}
@@ -1608,6 +1610,29 @@ $('#sheetBtn').addEventListener('click',e=>{const m=$('#sheetMenu');m.hidden=!m.
 document.addEventListener('click',e=>{if(!e.target.closest('.dlwrap')){$('#sheetMenu').hidden=true;$('#sheetBtn').setAttribute('aria-expanded','false')}});
 $('#sheetMenu').addEventListener('click',async e=>{const b=e.target.closest('[data-sp]');if(!b)return;const n=+b.dataset.sp;$('#sheetMenu').hidden=true;$('#sheetBtn').setAttribute('aria-expanded','false');
   const btn=$('#sheetBtn'),t0=btn.textContent;btn.disabled=true;btn.textContent='만드는 중…';try{if(window.NSMBlankSheet)await NSMBlankSheet(n)}finally{btn.disabled=false;btn.textContent=t0}});
+
+// 오프라인 저장: 모든 데이터 파일(암호화된 채)을 기기 저장소에 받아 둔다 → 인터넷 없이도 모든 문제·그림·해설·문서가 열린다(AI 채점만 인터넷 필요)
+const OFF_LIBS=['https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg.js','https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js','https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js','https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js']
+  .concat(['ams','boldsymbol','cancel','cases','color','mathtools','braket','enclose','extpfeil','gensymb','mhchem','newcommand','noerrors','noundefined','upgreek','unicode','textmacros','textcomp','bbox','centernot','colortbl','configmacros','tagformat','html','action','verb','empheq','amscd','physics'].map(x=>'https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/input/tex/extensions/'+x+'.js'));
+function offLabel(){const b=$('#offBtn');if(!b)return;let d='';try{d=localStorage.getItem('nsm:offline')||''}catch(e){}b.textContent=d?'오프라인 준비됨':'오프라인 저장';b.title=d?('모든 자료를 '+d+'에 이 기기에 받아 뒀어요. 다시 누르면 최신 자료로 새로 받아요.'):'모든 문제·그림·해설을 이 기기에 받아 두면 인터넷 없이도 열려요'}
+let OFF_RUN=false;
+async function offlineSave(){
+  if(OFF_RUN)return;const b=$('#offBtn');
+  let L;try{L=await fetch('files.json').then(r=>r.json())}catch(e){alert('파일 목록을 받지 못했어요. 인터넷 연결을 확인해 주세요.');return}
+  const mb=Math.round((L.bytes||0)/1e6);
+  if(!confirm(`모든 문제·그림·해설·문서(약 ${mb}MB)를 이 기기에 받아 둘까요?\n와이파이에서 하는 것을 권해요. 받는 동안 화면을 켜 두세요.`))return;
+  OFF_RUN=true;try{if(navigator.storage&&navigator.storage.persist)await navigator.storage.persist()}catch(e){}
+  const files=L.files||[];const all=files.length+OFF_LIBS.length;let done=0,fail=0;
+  const tick=()=>{b.textContent=`받는 중 ${Math.floor(done/all*100)}%`};tick();b.disabled=true;
+  const one=async f=>{try{const u=window.__encUrl?await window.__encUrl(f):f;const r=await fetch(u,{cache:'reload'});if(!r.ok)fail++;else await r.arrayBuffer()}catch(e){fail++}done++;if(done%10===0||done===all)tick()};
+  const lib=async u=>{try{const r=await fetch(u,{mode:'no-cors',cache:'reload'});await r.arrayBuffer().catch(()=>{})}catch(e){fail++}done++;tick()};
+  const q=files.slice();await Promise.all(Array.from({length:6},async()=>{while(q.length)await one(q.shift())}));
+  for(const u of OFF_LIBS)await lib(u);
+  OFF_RUN=false;b.disabled=false;
+  if(fail>Math.max(3,all*0.01)){b.textContent='오프라인 저장';alert(`일부 파일(${fail}개)을 받지 못했어요. 인터넷 연결을 확인하고 다시 눌러 주세요.`);return}
+  const d=new Date();try{localStorage.setItem('nsm:offline',`${d.getMonth()+1}월 ${d.getDate()}일`)}catch(e){}offLabel();
+  alert('다 받았어요. 이제 인터넷이 없어도 모든 문제·그림·해설·문서가 열려요. (AI 채점만 인터넷이 필요해요)\n자료가 새로 올라오면 이 버튼을 다시 눌러 최신으로 받으세요.')}
+$('#offBtn').addEventListener('click',offlineSave);offLabel();
 $('#guideBtn').addEventListener('click',()=>onbOpen('guide'));$('#pickBtn').addEventListener('click',()=>onbOpen('pick'));
 function onbMaybe(){let seen=null;try{seen=localStorage.getItem('nsm:onb')}catch(e){}
   const sp=new URLSearchParams(location.search);
