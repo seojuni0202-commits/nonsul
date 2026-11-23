@@ -1626,6 +1626,8 @@ async function offlineSave(){
   const tick=()=>{b.textContent=`받는 중 ${Math.floor(done/all*100)}%`};tick();b.disabled=true;
   const one=async f=>{try{const u=window.__encUrl?await window.__encUrl(f):f;const r=await fetch(u,{cache:'reload'});if(!r.ok)fail++;else await r.arrayBuffer()}catch(e){fail++}done++;if(done%10===0||done===all)tick()};
   const lib=async u=>{try{const r=await fetch(u,{mode:'no-cors',cache:'reload'});await r.arrayBuffer().catch(()=>{})}catch(e){fail++}done++;tick()};
+  // 앱 껍데기(첫 화면·열쇠·아이콘)도 받아 둔다: 오프라인에서 처음 열 때 필요
+  for(const s of ['./','key.json','manifest.webmanifest','icon-192.png','icon-180.png','icon-512.png']){try{await fetch(new URL(s,location.href).href,{cache:'reload'}).then(r=>r.arrayBuffer())}catch(e){}}
   const q=files.slice();await Promise.all(Array.from({length:6},async()=>{while(q.length)await one(q.shift())}));
   for(const u of OFF_LIBS)await lib(u);
   OFF_RUN=false;b.disabled=false;
