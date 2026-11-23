@@ -139,6 +139,25 @@ h2{font-family:var(--f-display);font-size:1.35rem;margin:0 0 4px}
 .pcard .ptier{font-size:.82rem;color:#4b5563}
 .pcard .pprog{font-size:.78rem;color:#6b7280}
 .sbtn .nm{font-weight:600}
+.igrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(172px,1fr));gap:8px}
+.pcard2{flex-direction:column;align-items:flex-start;gap:6px}
+.pcard2 .ptks{display:flex;gap:4px;flex-wrap:wrap}.pcard2 .ptks i{font-style:normal;font-size:.72rem;font-weight:600;color:var(--blue);background:var(--blue-soft);border-radius:999px;padding:1px 8px}
+.igrid .iallw{grid-column:1/-1}.igrid .iall{width:100%;flex-direction:row;align-items:baseline;flex-wrap:wrap;gap:4px 12px;padding:12px 16px}
+.igrid .iall .psum{-webkit-line-clamp:2}
+.scard{width:100%;min-height:48px;text-align:left;background:var(--sheet);border:1px solid var(--line);border-radius:8px;padding:12px 38px 12px 14px;cursor:pointer;font:inherit;color:var(--ink);display:flex;align-items:center}
+.scard:hover,.scard:focus-visible{border-color:var(--blue)}
+.scard .nm{font-weight:600;font-size:.93rem;line-height:1.3;overflow-wrap:anywhere;min-width:0}
+.igrid .sgstar{top:50%;transform:translateY(-50%);right:4px;font-size:1rem}
+@media (max-width:560px){.igrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.pcard .ptks{display:flex;gap:6px;flex-wrap:wrap}.pcard .ptks i{font-style:normal;font-size:.75rem;font-weight:600;color:var(--blue);background:var(--blue-soft);border-radius:999px;padding:2px 9px}
+.ppick h3{margin:4px 0 2px;font-size:1.25rem}.ppick .ppq{margin:0 0 14px;color:#4b5563}
+.ppbtns{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+.ppb{text-align:left;background:var(--sheet);border:1px solid var(--line);border-radius:10px;padding:16px;cursor:pointer;font:inherit;color:var(--ink);display:flex;flex-direction:column;gap:8px;min-height:44px}
+.ppb:hover,.ppb:focus-visible{border-color:var(--blue)}.ppb.last{border-color:#c7d5f5;background:var(--blue-soft)}
+.ppb .ppl{font-weight:700;font-size:1.15rem}.ppb .ppp{font-size:.86rem;line-height:1.55;color:#374151}.ppb .ptier{font-size:.82rem;color:#4b5563}.ppb .pprog{font-size:.78rem;color:#6b7280}
+.pseg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:0 0 14px;background:var(--sheet)}
+.pseg button{font:inherit;border:0;background:none;padding:9px 20px;min-height:40px;cursor:pointer;color:#374151}.pseg button+button{border-left:1px solid var(--line)}
+.pseg button.on{background:var(--blue);color:#fff;font-weight:600}
 .bar2{display:flex;height:6px;border-radius:3px;overflow:hidden;background:var(--grid)}
 .bar2 i{display:block;height:100%}
 .sbtn .ct{font-size:.75rem;color:var(--muted);font-variant-numeric:tabular-nums}
@@ -552,7 +571,7 @@ html{touch-action:manipulation;-webkit-text-size-adjust:100%}
   <h2>기출 검색</h2>
   <div id="ihome">
     <div class="ssearch"><input type="search" id="iq" placeholder="학교 이름으로 찾기 (예: 한양, 성대, 카대) · 다른 낱말은 전체 기출에서 찾아요" aria-label="학교 검색" autocomplete="off"><span id="icount"></span></div>
-    <div class="pgrid" id="igrid"></div>
+    <div class="igrid" id="igrid"></div>
   </div>
   <div id="ilist" hidden>
   <p class="iback"><button type="button" class="btn" id="ibackBtn">← 학교 목록</button> <strong id="ititle"></strong></p>
@@ -631,9 +650,10 @@ html{touch-action:manipulation;-webkit-text-size-adjust:100%}
 
 <section id="v-prep" hidden>
   <h2>2027 대비</h2>
+  <p class="lede" id="plede">학교별 출제 예측 / 시험 전 꼭 봐야 할 기출 정리</p>
   <div class="subtabs" id="psub" hidden></div>
   <div class="ssearch" id="psearch"><input type="search" id="pq" placeholder="학교 이름으로 찾기 (예: 한양, 고대, 카대)" aria-label="대비 학교 검색" autocomplete="off"><span id="pcount"></span></div>
-  <div class="pgrid" id="pgrid"></div>
+  <div class="igrid" id="pgrid"></div>
   <p id="pback" hidden><button type="button" class="btn" id="pbackBtn">← 학교 목록</button></p>
   <div id="pbody"></div>
 </section>
@@ -783,14 +803,12 @@ function renderItemsHome(){
   const by={};ITEMS.forEach(i=>{if(!trOK(i))return;const o=by[i.s]||(by[i.s]={n:0,m:0,b:0,done:0,y0:9999,y1:0,med:false});o.n++;if(i.tr.startsWith('수리'))o.m++;else if(i.tr.includes('생명'))o.b++;const y=parseInt(i.y)||0;if(y){o.y0=Math.min(o.y0,y);o.y1=Math.max(o.y1,y)}if(/M|P/.test(i._g||''))o.med=true;if(rec.get(i.id).st==='done')o.done++});
   let list=META.schools.filter(x=>by[x.n]).map(x=>({...x,c:by[x.n]}));
   if(q)list=list.filter(x=>{const hay=(x.n+disp(x.n)).replace(/\s+/g,'').toLowerCase();return sHit(hay,q)||((q==='의대'||q==='약대'||q==='메디컬')&&x.c.med)});
-  list.sort((a,b)=>(FAV.has('s',b.n)-FAV.has('s',a.n))||(b.c.n-a.c.n));
+  list.sort((a,b)=>(FAV.has('s',b.n)-FAV.has('s',a.n))||disp(a.n).localeCompare(disp(b.n),'ko'));
   $('#icount').textContent=q?list.length+'개 학교':'';
   const total=ITEMS_V.filter(trOK).length;
-  const all=`<div class="swrap"><button type="button" class="pcard iall" data-i="all"><span class="nm">전체 기출에서 찾기</span><span class="psum">${q&&!list.length?`"${esc($('#iq').value.trim())}"(으)로 모든 학교 기출을 검색해요.`:'학교를 가리지 않고 풀이 논리·단원·낱말로 찾아요.'}</span><span class="ptier">${total.toLocaleString()}문항 · ${Object.keys(by).length}개 학교</span></button></div>`;
-  grid.innerHTML=all+list.map(x=>{const c=x.c,fv=FAV.has('s',x.n),pct=c.n?Math.round(c.done/c.n*100):0;
-    return `<div class="swrap"><span class="star sgstar${fv?' on':''}" data-istar="${esc(x.n)}" role="button" tabindex="0" aria-label="${fv?'즐겨찾기 해제':'즐겨찾기'}">${fv?'★':'☆'}</span><button type="button" class="pcard" data-i="${x.id}"><span class="nm">${esc(disp(x.n))}</span>
-      <span class="ptier">수리 ${c.m} · 생명 ${c.b}${c.med?' · 의대·약대 시험 있음':''}</span><span class="ptier">${c.y0===c.y1?c.y0:c.y0+'~'+c.y1}학년도 · ${c.n}문항</span>
-      <span class="bar2"><i style="width:${pct}%;background:var(--blue)"></i></span><span class="pprog">풀었음 ${c.done}/${c.n}</span></button></div>`}).join('');
+  const all=`<div class="swrap iallw"><button type="button" class="pcard iall" data-i="all"><span class="nm">전체 기출에서 찾기</span><span class="psum">${q&&!list.length?`"${esc($('#iq').value.trim())}"(으)로 모든 학교 기출을 검색해요.`:`학교를 가리지 않고 풀이 논리·단원·낱말로 찾아요 · ${total.toLocaleString()}문항`}</span></button></div>`;
+  grid.innerHTML=all+list.map(x=>{const c=x.c,fv=FAV.has('s',x.n);
+    return `<div class="swrap"><span class="star sgstar${fv?' on':''}" data-istar="${esc(x.n)}" role="button" tabindex="0" aria-label="${fv?'즐겨찾기 해제':'즐겨찾기'}">${fv?'★':'☆'}</span><button type="button" class="scard" data-i="${x.id}" title="${c.n}문항${c.med?' · 의대·약대 시험 있음':''}"><span class="nm">${esc(disp(x.n))}</span></button></div>`}).join('');
 }
 function showItems(arg){
   const home=!arg;$('#ihome').hidden=!home;$('#ilist').hidden=home;
@@ -1058,33 +1076,39 @@ let PIDX2=null;
 async function openPrep(id){
   if(!PIDX2){try{PIDX2=await fetch('prep/index.json').then(r=>r.json())}catch(e){PIDX2=[]}}
   const grid=$('#pgrid'),el=$('#pbody'),back=$('#pback');
-  if(!id||!PIDX2.some(x=>x.id===id)){back.hidden=true;el.innerHTML='';grid.hidden=false;$('#psearch').hidden=false;renderPrepGrid();return}
-  $('#psearch').hidden=true;
-  grid.hidden=true;back.hidden=false;
-  el.innerHTML='<div class="doc"><p class="note">불러오는 중…</p></div>';
-  let t='';try{const r=await fetch('prep/'+id+'.md');t=r.ok?await r.text():''}catch(e){}
-  el.innerHTML='<div class="doc">'+md(t)+'</div>';compactPrep(el);typeset(el);markPrep(el);window.scrollTo(0,0);
+  // 'sXX' = 학교(계열 고르기), 'sXX-med' = 학교·계열 문서
+  const m=String(id||'').match(/^(s\d+)(?:-(med|phar|nat))?$/);const sc=m&&PIDX2.find(x=>x.id===m[1]);
+  if(!sc){back.hidden=true;el.innerHTML='';grid.hidden=false;$('#psearch').hidden=false;$('#plede').hidden=false;renderPrepGrid();return}
+  $('#psearch').hidden=true;$('#plede').hidden=true;grid.hidden=true;back.hidden=false;
+  const TR=sc.tracks||[];let tk=m[2]&&TR.find(x=>x.k===m[2]);
+  if(TR.length===1&&!tk)tk=TR[0];
+  if(TR.length&&!tk){el.innerHTML=prepPick(sc);typeset(el);window.scrollTo(0,0);return}
+  const file=tk?tk.f:sc.id;
+  el.innerHTML=(tk&&TR.length>1?prepSeg(sc,tk.k):'')+'<div class="doc"><p class="note">불러오는 중…</p></div>';
+  if(tk)try{localStorage.setItem('ptrk:'+sc.id,tk.k)}catch(e){}
+  let t='';try{const r=await fetch('prep/'+file+'.md');t=r.ok?await r.text():''}catch(e){}
+  el.querySelector('.doc').innerHTML=md(t);compactPrep(el);typeset(el);markPrep(el);window.scrollTo(0,0);
 }
+const PTRK={med:'의예',phar:'약학',nat:'자연'};
+function prepProg(ids){ids=ids||[];const done=ids.filter(q=>rec.get(q).st==='done').length;return {done,n:ids.length,pct:ids.length?Math.round(done/ids.length*100):0}}
+function prepPick(sc){let last='';try{last=localStorage.getItem('ptrk:'+sc.id)||''}catch(e){}
+  return `<div class="ppick"><h3>${esc(disp(sc.n))}</h3><p class="ppq">지원할 계열을 고르세요</p><div class="ppbtns">`+sc.tracks.map(x=>{const g=prepProg(x.ids);
+    return `<button type="button" class="ppb${x.k===last?' last':''}" data-pt="${esc(sc.id+'-'+x.k)}"><span class="ppl">${esc(x.l)}</span><span class="ppp">${texInline(x.paper||'')}</span><span class="ptier"><b>1순위</b> ${x.t1||0} · <b>2순위</b> ${x.t2||0} · <b>3순위</b> ${x.t3||0}문항</span><span class="bar2"><i style="width:${g.pct}%;background:var(--blue)"></i></span><span class="pprog">풀었음 ${g.done}/${g.n}</span></button>`}).join('')+'</div></div>'}
+function prepSeg(sc,k){return `<div class="pseg" role="tablist" aria-label="계열">`+sc.tracks.map(x=>`<button type="button" role="tab" aria-selected="${x.k===k}" class="${x.k===k?'on':''}" data-pt="${esc(sc.id+'-'+x.k)}">${esc(x.l)}</button>`).join('')+'</div>'}
 function renderPrepGrid(){
   const grid=$('#pgrid');if(!PIDX2||!PIDX2.length){grid.innerHTML='<p class="note">준비된 학교가 없어요.</p>';return}
   const q=$('#pq').value.trim().replace(/\s+/g,'').toLowerCase();
   const AL={'고대':'고려','연대':'연세','성대':'성균관','카대':'가톨릭','이대':'이화','숙대':'숙명','부대':'부산','경북대':'경북','인하대':'인하','아주대':'아주','미래':'미래캠퍼스','한대':'한양','중대':'중앙','건대':'건국','경희대':'경희','단대':'단국','설대':'서울대'};
   const qn=AL[q]||q;
-  const list=PIDX2.filter(x=>{const hay=(x.n+disp(x.n)).replace(/\s+/g,'').toLowerCase();return !q||hay.includes(qn)||sHit(hay,q)}).sort((a,b)=>(FAV.d.s.has(b.n)-FAV.d.s.has(a.n)));
+  const list=PIDX2.filter(x=>{const hay=(x.n+disp(x.n)).replace(/\s+/g,'').toLowerCase();return !q||hay.includes(qn)||sHit(hay,q)}).sort((a,b)=>(FAV.d.s.has(b.n)-FAV.d.s.has(a.n))||disp(a.n).localeCompare(disp(b.n),'ko'));
   $('#pcount').textContent=q?list.length+'개 학교':'';
   if(!list.length){grid.innerHTML='<div class="empty">찾는 학교가 없어요. 대비 자료는 의대·약대 논술이 있는 '+PIDX2.length+'개 학교만 있어요.</div>';return}
-  grid.innerHTML=list.map(x=>{const ids=x.ids||[];const done=ids.filter(q=>rec.get(q).st==='done').length;const again=ids.filter(q=>{const t=rec.get(q).st;return t==='again'||t==='wrong'}).length;
-    const pct=ids.length?Math.round(done/ids.length*100):0;
-    const fv=FAV.has('s',x.n);
-    return `<div class="swrap"><span class="star sgstar${fv?' on':''}" data-pstar="${esc(x.n)}" role="button" tabindex="0" aria-label="${fv?'즐겨찾기 해제':'즐겨찾기'}">${fv?'★':'☆'}</span><button type="button" class="pcard" data-p="${esc(x.id)}"><span class="nm">${esc(disp(x.n))}</span>
-      <span class="psum">${texInline(x.sum||'')}</span>
-      <span class="ptier"><b>1순위</b> ${x.t1||0} · <b>2순위</b> ${x.t2||0} · <b>3순위</b> ${x.t3||0}문항</span>
-      <span class="bar2"><i style="width:${pct}%;background:var(--blue)"></i></span>
-      <span class="pprog">풀었음 ${done}/${ids.length}${again?` · 다시 볼 것 ${again}`:''}</span></button></div>`}).join('');
+  grid.innerHTML=list.map(x=>{const fv=FAV.has('s',x.n);const tk=(x.tracks||[]).map(k=>`<i>${esc(k.l)}</i>`).join('');
+    return `<div class="swrap"><span class="star sgstar${fv?' on':''}" data-pstar="${esc(x.n)}" role="button" tabindex="0" aria-label="${fv?'즐겨찾기 해제':'즐겨찾기'}">${fv?'★':'☆'}</span><button type="button" class="scard pcard2" data-p="${esc(x.id)}"><span class="nm">${esc(disp(x.n))}</span>${tk?`<span class="ptks">${tk}</span>`:''}</button></div>`}).join('');
   typeset(grid);
 }
 $('#pq').addEventListener('input',()=>renderPrepGrid());
-$('#pq').addEventListener('keydown',e=>{if(e.key==='Enter'){const b=$('#pgrid .pcard');if(b)b.click()}});
+$('#pq').addEventListener('keydown',e=>{if(e.key==='Enter'){const b=$('#pgrid .scard');if(b)b.click()}});
 // 순위 표(순서·기출·왜·유형)를 한 줄짜리 목록으로: 카드 이름 / 이유 + 유형 칩
 function compactPrep(el){
   el.querySelectorAll('table').forEach(tb=>{const hs=[...tb.querySelectorAll('thead th')].map(x=>x.textContent.trim());
@@ -1103,22 +1127,22 @@ let TDUP=null;
 // 짧은 시험 구분: 학과 표시의 괄호 안(예: '일반형 모의', '자연 1회차', '오후2'), 없으면 표시 그대로
 const gShort=i=>{const l=String(gDisp(i)||'');const m=l.match(/\(([^()]*)\)\s*$/);return (m?m[1]:l).replace(/^약술형\s*/,'').trim()};
 function cardTitle(i){if(!i)return '';
-  const base=`${disp(i.s)} ${i.y} ${kDisp(i)}`,q=qDisp(i.q);
-  if(!TDUP){TDUP={b:{},g:{},gs:{}};for(const j of ITEMS){if(!j)continue;const b=`${disp(j.s)} ${j.y} ${kDisp(j)}|${qDisp(j.q)}`;TDUP.b[b]=(TDUP.b[b]||0)+1;const g1=b+'|'+gShort(j);TDUP.g[g1]=(TDUP.g[g1]||0)+1;const g2=g1+'|'+j.subj;TDUP.gs[g2]=(TDUP.gs[g2]||0)+1}}
-  const b=base+'|'+q;if((TDUP.b[b]||0)<2)return `${base} · ${q}`;
-  const gs=gShort(i);let lab=gs;
-  if((TDUP.g[b+'|'+gs]||0)>1){lab=[gs,i.subj].filter(Boolean).join(' ');
-    if((TDUP.gs[b+'|'+gs+'|'+i.subj]||0)>1&&i.g&&!lab.includes(i.g))lab=[gs,i.g].filter(Boolean).join(' ')}
-  let t=lab?`${base} (${lab}) · ${q}`:`${base} · ${q}`;
+  // 기출 탭 카드 머리줄과 같은 순서·같은 글: 학교 학년도 구분 · 시험지(학과 표시) · 번호
+  const base=`${disp(i.s)} ${i.y} ${kDisp(i)}`,q=qDisp(i.q),gl=String(gDisp(i)||'').trim();
+  if(!TDUP){TDUP={g:{},gs:{}};for(const j of ITEMS){if(!j)continue;const g1=`${disp(j.s)} ${j.y} ${kDisp(j)}|${qDisp(j.q)}|${String(gDisp(j)||'').trim()}`;TDUP.g[g1]=(TDUP.g[g1]||0)+1;const g2=g1+'|'+j.subj;TDUP.gs[g2]=(TDUP.gs[g2]||0)+1}}
+  const k1=`${base}|${q}|${gl}`;let lab=gl;
+  if((TDUP.g[k1]||0)>1){lab=[gl,i.subj].filter(Boolean).join(' ');
+    if((TDUP.gs[k1+'|'+i.subj]||0)>1&&i.g&&!lab.includes(i.g))lab=[gl,i.g].filter(Boolean).join(' ')}
+  let t=lab?`${base} · ${lab} · ${q}`:`${base} · ${q}`;
   // 그래도 같으면(같은 해 같은 구분의 모의가 두 벌) 번호 순서로 세트1·세트2
   if(!TDUP.t){TDUP.t={};TDUP.busy=1;for(const j of ITEMS){if(!j)continue;const x=cardTitle(j);(TDUP.t[x]=TDUP.t[x]||[]).push(j.id)}TDUP.busy=0}
-  const grp=!TDUP.busy&&TDUP.t[t];if(grp&&grp.length>1)t=t.replace(/\) · /,` 세트${grp.indexOf(i.id)+1}) · `);
+  const grp=!TDUP.busy&&TDUP.t[t];if(grp&&grp.length>1)t=t.replace(/ · ([^·]*)$/,` · 세트${grp.indexOf(i.id)+1} · $1`);
   return t}
 function markPrep(el){
   el.querySelectorAll('a[href^="#q-"]').forEach(a=>{const id=+a.getAttribute('href').slice(3);const st=rec.get(id).st;
     a.insertAdjacentHTML('afterend',st?` <span class="st ${st}">${ST_LAB[st]}</span>`:'')})
 }
-$('#pgrid').addEventListener('click',e=>{const st=e.target.closest('[data-pstar]');if(st){FAV.toggle('s',st.dataset.pstar);return}const b=e.target.closest('[data-p]');if(b)location.hash='prep-'+b.dataset.p});$('#pbackBtn').addEventListener('click',()=>{location.hash='prep'});
+$('#pgrid').addEventListener('click',e=>{const st=e.target.closest('[data-pstar]');if(st){FAV.toggle('s',st.dataset.pstar);return}const b=e.target.closest('[data-p]');if(b)location.hash='prep-'+b.dataset.p});$('#pbackBtn').addEventListener('click',()=>{location.hash='prep'});$('#pbody').addEventListener('click',e=>{const b=e.target.closest('[data-pt]');if(b)location.hash='prep-'+b.dataset.pt});
 document.addEventListener('click',e=>{const a=e.target.closest('a[href^="#q-"]');if(!a)return;e.preventDefault();
   const id=+a.getAttribute('href').slice(3);if(!ITEMS[id])return;
   const scope=a.closest('.doc')||document;const ids=[...new Set([...scope.querySelectorAll('a[href^="#q-"]')].map(x=>+x.getAttribute('href').slice(3)))].filter(x=>ITEMS[x]);
@@ -1512,7 +1536,7 @@ Promise.all(['meta.json','items.json','scores_idx.json','hide.json','idmap.json'
 }).catch(e=>{$('#cards').innerHTML='<div class="empty">데이터를 불러오지 못했어요. 새로고침해 보세요.</div>'});
 
 /* 필기·타이머·AI 채점(ink.js)에 넘기는 작은 API */
-window.NSM={cur:()=>svCur,orig:id=>ORIG[id],
+window.NSM={cur:()=>svCur,open:id=>openSolve(id),orig:id=>ORIG[id],
   title:id=>cardTitle(ITEMS[id]),n:()=>ITEMS.length,
   info:i=>({school:disp(i.s),s:i.s,year:i.y,k:i.k,q:i.q,g:i.g}),
   texts:async keys=>{const out=[];for(const k of keys){if(!TPIDX[k])continue;const pk=await getTPack(TPIDX[k]);const t=(pk[k]||'').trim();if(t)out.push(t)}return out.join('\n\n')}};
