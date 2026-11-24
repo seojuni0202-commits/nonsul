@@ -130,7 +130,7 @@ body:has(#solve:not([hidden])) .askfab,body:has(#solve:not([hidden])) .askp{disp
 .onb-steps{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:14px}
 .onb-steps li{display:flex;gap:12px;align-items:flex-start}
 .onb-steps .n{flex:none;width:26px;height:26px;border-radius:50%;background:var(--blue);color:#fff;font-weight:700;font-size:.85rem;display:flex;align-items:center;justify-content:center;margin-top:2px}
-.onb-steps b{display:block;margin-bottom:2px}.onb-steps p{margin:0;line-height:1.65;color:#374151;font-size:.93rem}
+.onb-steps b{display:block;margin-bottom:2px}.onb-sub{margin:6px 0 4px;padding-left:1.2em;font-size:.9rem;line-height:1.6;color:#374151}.onb-sub li{display:list-item!important;margin:3px 0}.onb-sub b{display:inline;margin:0 6px 0 0;color:#111827}.onb-steps p+.onb-sub+p{margin-top:4px}.onb-steps p{margin:0;line-height:1.65;color:#374151;font-size:.93rem}
 .onb-mine{margin:0 0 14px;font-size:.9rem;color:var(--muted)}
 .onb-foot .primary{background:var(--blue);color:#fff;border-color:var(--blue)}.onb-foot .primary:disabled{opacity:.45;cursor:not-allowed}
 
@@ -1643,7 +1643,23 @@ function onbGuide(){const box=$('#onbBox');const mine=[...FAV.d.s].map(sName);
    <li><span class="n">3</span><div><b>답안 쓰고 AI 채점 받기</b><p>웹 안의 답안지에 바로 쓰거나, 「종이 답안」에서 답안지 PDF를 받아 프린트하거나 패드에서 푼 뒤 사진·캡처를 올리면 돼요. AI가 그 학교의 채점 기준과 서술 주안점에 맞춰 채점해 줘요.</p></div></li>
    <li><span class="n">4</span><div><b>풀고 나서 추가 학습</b><p>오른쪽 「추가 학습」에서 관련 기출을 이어 풀고, 개념·논리를 익혀요. 단순 개념 정리가 아니라, 이전 기출에서 쓰인 특이한 발상과 자주 나오는 정석 논리를 미리 익히도록 모아 둔 거예요.</p></div></li>
    <li><span class="n">5</span><div><b>풀이 논리 · 행동강령</b><p>「필수 개념」 탭 맨 위 「풀이 논리」에는 모든 기출에 쓰인 논리를 묶어 「이 조건이 보이면 → 이렇게 한다」 행동강령으로 정리해 뒀어요. 문제 화면의 필수 논리 칩을 누르면 그 행동강령으로 바로 가요. 개념 글을 보다가 오른쪽 아래 「개념 질문」을 누르면 그 개념에 대해 AI에게 물어볼 수 있어요(인터넷 필요).</p></div></li>
-     <li><span class="n">6</span><div><b>앱처럼 쓰기</b><p>홈 화면에 바로가기를 만들면 앱처럼 열려요. 아이패드·아이폰은 Safari 공유 버튼 → 「홈 화면에 추가」, 안드로이드는 Chrome 메뉴 → 「홈 화면에 추가」(또는 「앱 설치」), 컴퓨터는 Chrome 주소창 오른쪽의 설치 아이콘을 누르면 돼요. 맨 위 「오프라인 저장」을 한 번 누르면 모든 문제·그림·해설이 기기에 받아져, 인터넷 없이도 다 열려요(AI 채점만 인터넷 필요). 안드로이드는 <a href="app/nonsul.apk" download>앱 파일(APK)</a>을 받아 설치할 수도 있어요.</p></div></li>
+   <li><span class="n">6</span><div><b>앱처럼 쓰기 (홈 화면 바로가기 · 모든 기기)</b><p>설치 없이 홈 화면 아이콘으로 앱처럼 열려요. 자료가 올라오면 저절로 최신이 돼요.</p>
+    <ul class="onb-sub">
+     <li><b>아이폰·아이패드</b> Safari로 이 사이트 열기 → 공유 버튼(네모에 위 화살표, 아이폰은 아래쪽·아이패드는 주소창 오른쪽) → 「홈 화면에 추가」 → 「추가」</li>
+     <li><b>안드로이드</b> Chrome으로 열기 → 오른쪽 위 ⋮ → 「홈 화면에 추가」 → 「설치」 (삼성 인터넷은 ≡ → 「현재 페이지 추가」 → 「홈 화면」)</li>
+     <li><b>컴퓨터</b> Chrome·Edge 주소창 오른쪽의 설치 아이콘(모니터에 ↓) → 「설치」</li>
+     <li><b>오프라인</b> 아이콘으로 연 뒤 맨 위 「오프라인 저장」을 한 번 누르면 모든 문제·그림·해설이 기기에 받아져 인터넷 없이도 열려요(AI 채점·개념 질문만 인터넷 필요). 다시 누르면 없거나 바뀐 파일만 받아요.</li>
+    </ul></div></li>
+   <li><span class="n">7</span><div><b>안드로이드 앱 (APK 설치)</b><p>안드로이드 폰·태블릿에 진짜 앱으로 설치하는 방법이에요. 답안지 PDF가 바로 「다운로드」 폴더에 저장되고, 답안 사진도 갤러리에서 바로 골라요.</p>
+    <ol class="onb-sub">
+     <li><a href="app/nonsul.apk" download>앱 파일(APK) 받기</a> → Chrome이 「유해할 수 있는 파일」이라고 하면 「그래도 다운로드」</li>
+     <li>알림창이나 「내 파일 → 다운로드」에서 nonsul.apk 누르기</li>
+     <li>「출처를 알 수 없는 앱」 안내가 나오면 「설정」 → 「이 출처 허용」 켜고 뒤로 → 「설치」</li>
+     <li>삼성 폰에서 막히면: 설정 → 보안 및 개인정보 보호 → 「자동 차단」을 잠시 끄고 설치한 뒤 다시 켜기</li>
+     <li>「Play 프로텍트」 경고가 나오면 「세부정보」 → 「무시하고 설치」</li>
+     <li>앱 열기 → 비밀번호 입력 → 와이파이에서 「오프라인 저장」 한 번</li>
+    </ol>
+    <p>앱은 이 사이트를 그대로 여는 방식이라 새 기능·자료는 다시 설치하지 않아도 적용돼요. 아이폰은 APK를 쓸 수 없으니 6번 방법을 쓰세요.</p></div></li>
   </ol>
   <div class="onb-foot"><button type="button" class="btn" id="onbPick2">학교 다시 고르기</button><button type="button" class="btn primary" id="onbGo">2027 대비로 가기</button></div>`;
   $('#onbPick2').onclick=()=>{onbPick()};$('#onbGo').onclick=()=>{onbClose();location.hash='prep'};setTimeout(()=>$('#onbGo').focus(),50)}
