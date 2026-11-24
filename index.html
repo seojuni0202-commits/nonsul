@@ -1687,10 +1687,10 @@ ${ASK.doc.slice(0,14000)}
 </개념글>`;
   ASK.ctl=new AbortController();$('#askGo').disabled=true;
   const r=await window.NSMAsk(sys,h.slice(-8).map(m=>({role:m.role,content:m.content})),ASK.ctl.signal);ASK.ctl=null;$('#askGo').disabled=false;wait.remove();
-  if(r.err){const M={nokey:'AI 키가 없어요. 문제 화면의 필기 → AI 채점에서 「API 키 넣기」로 키를 넣어 주세요.',nobudget:'AI 예산이 정해지지 않았어요. 필기 → AI 채점 → 키·예산 설정에서 예산을 넣어 주세요.',budget:`남은 AI 예산(${r.left}원)이 부족해요.`,key:'AI 키가 맞지 않아요.',rate:'요청이 많아요. 잠시 뒤 다시 물어봐 주세요.',net:'인터넷에 연결하지 못했어요.',abort:'멈췄어요.',http:'답을 받지 못했어요. '+(r.msg||'')};
-    const h2=askLoad(ASK.id);h2.pop();askSave(ASK.id,h2);$('#askIn').value=q;askDraw();$('#askNote').textContent=M[r.err]||'답을 받지 못했어요.';return}
+  if(r.err){const M={nokey:'AI 키가 없어요. 문제 화면의 필기 → AI 채점에서 「API 키 넣기」로 키를 넣어 주세요.',nobudget:'AI 예산이 정해지지 않았어요. 필기 → AI 채점 → 키·예산 설정에서 예산을 넣어 주세요.',budget:`남은 AI 예산(${r.left}원)이 부족해요.`,key:'AI 키가 맞지 않아요.',rate:'요청이 많아요. 잠시 뒤 다시 물어봐 주세요.',net:'인터넷에 연결하지 못했어요.',empty:'답이 비어 있었어요. 질문을 조금 짧게 바꿔 다시 물어봐 주세요.',refusal:'이 질문에는 답하지 않았어요.',abort:'멈췄어요.',http:'답을 받지 못했어요. '+(r.msg||'')};
+    const h2=askLoad(ASK.id);h2.pop();askSave(ASK.id,h2);$('#askIn').value=q;askDraw();$('#askNote').textContent=(M[r.err]||'답을 받지 못했어요.')+(r.status||r.msg?` [${r.err}${r.status?' '+r.status:''}${r.msg?' · '+String(r.msg).slice(0,160):''}]`:` [${r.err}]`);return}
   const h3=askLoad(ASK.id);h3.push({role:'assistant',content:r.text||'(빈 답)'});askSave(ASK.id,h3);askDraw();
-  $('#askNote').textContent=`이번 질문 약 ${r.cost}원 · 남은 AI 예산 ${r.left}원`});
+  $('#askNote').textContent=`이번 질문 약 ${r.cost}원 · 남은 AI 예산 ${r.left}원`+(r.cut?' (답이 길어 중간에서 끊겼어요)':'')});
 $('#guideBtn').addEventListener('click',()=>onbOpen('guide'));$('#pickBtn').addEventListener('click',()=>onbOpen('pick'));
 function onbMaybe(){let seen=null;try{seen=localStorage.getItem('nsm:onb')}catch(e){}
   // 이 기능 전에 학교를 고른 기기: 지금 즐겨찾기를 준비 학교로 본다
