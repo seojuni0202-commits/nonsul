@@ -583,6 +583,40 @@ h2{font-size:1.55rem;margin:0 0 16px;letter-spacing:-.01em}
   .cdoc{padding:16px 14px}
 }
 html{touch-action:manipulation;-webkit-text-size-adjust:100%}
+
+/* 문항 PDF: 담기(즐겨찾기)·병합·인쇄 */
+.qpick{all:unset;margin-left:auto;font-size:.78rem;font-weight:600;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:3px 9px;cursor:pointer;white-space:nowrap;background:#fff}
+.qpick[aria-pressed="true"]{color:#b45309;border-color:#f59e0b;background:#fffbeb}
+.qpick:focus-visible{outline:2px solid var(--blue)}
+#svPick[aria-pressed="true"]{color:#b45309;border-color:#f59e0b;background:#fffbeb}
+.pdfp{z-index:60}
+.pdf-list{list-style:none;margin:8px 0 12px;padding:0;border:1px solid var(--line);border-radius:10px;max-height:46vh;overflow:auto}
+.pdf-list li{display:flex;align-items:center;gap:8px;padding:8px 10px;border-top:1px solid var(--line);font-size:.9rem}
+.pdf-list li:first-child{border-top:0}
+.pdf-list .no{flex:none;width:22px;color:var(--muted);font-weight:700;text-align:right}
+.pdf-list .t{flex:1;min-width:0;word-break:keep-all}
+.pdf-list .t small{display:block;color:var(--muted);font-size:.78rem}
+.pdf-list button{flex:none;font:inherit;font-size:.8rem;border:1px solid var(--line);background:#fff;border-radius:6px;min-width:30px;min-height:30px;cursor:pointer}
+.pdf-opts{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.9rem;margin:0 0 12px}
+.pdf-opts label{display:flex;gap:6px;align-items:center}
+@media (max-width:480px){#solve .bar .row{gap:4px}#solve .bar .row .btn{padding:6px 8px;font-size:.84rem;min-width:0}}
+#printArea{display:none}
+@media print{
+  @page{size:A4;margin:14mm 13mm}
+  body>*:not(#printArea){display:none!important}
+  html,body{background:#fff!important;overflow:visible!important}
+  #printArea{display:block!important;color:#111;font-size:10.5pt}
+  #printArea .pa-cover{font-size:9pt;color:#555;border-bottom:1px solid #999;padding-bottom:4px;margin-bottom:10px}
+  #printArea .pa-item.pb{break-before:page}
+  #printArea .pa-item+.pa-item:not(.pb){margin-top:18px;padding-top:10px;border-top:1px solid #999}
+  #printArea h2{font-size:12.5pt;margin:0 0 8px}
+  #printArea h3.pa-ans{font-size:11pt;margin:14px 0 6px;padding-top:6px;border-top:1px dashed #999}
+  #printArea .typed{border:0!important;box-shadow:none!important;padding:0!important;max-width:none!important;background:none!important}
+  #printArea .pages{display:block!important}
+  #printArea img{max-width:100%!important;height:auto;break-inside:avoid;display:block;margin:6px 0}
+  #printArea mjx-container[display="true"]{overflow:visible!important}
+  #printArea table{break-inside:avoid}
+}
 /* [콤팩트 문서] 학교별 분석·필수 개념: 낱말 중간 줄바꿈 금지, 자간 살짝 좁힘, 목록은 촘촘히(1.7), 굵은 핵심어가 먼저 눈에 들어오게 */
 .doc,.cdoc{overflow-wrap:break-word;word-break:keep-all;letter-spacing:-.012em}
 .doc li,.cdoc li{line-height:1.7}
@@ -607,7 +641,7 @@ mjx-assistive-mml{max-width:100%!important;right:0}
 </style>
 
 <header class="top"><div class="wrap">
-  <h1>논술 기출 지도<button type="button" class="guidebtn" id="guideBtn">이용 가이드</button><button type="button" class="guidebtn" id="pickBtn">학교 다시 고르기</button><button type="button" class="guidebtn" id="offBtn" title="모든 문제·그림·해설을 이 기기에 받아 두면 인터넷 없이도 열려요">오프라인 저장</button><span class="dlwrap"><button type="button" class="guidebtn" id="sheetBtn" aria-expanded="false" aria-controls="sheetMenu">답안지 다운로드</button><span class="dlmenu" id="sheetMenu" hidden role="group" aria-label="답안지 쪽 수"><span class="dlh">빈 답안지 PDF</span><button type="button" data-sp="1">1쪽</button><button type="button" data-sp="2">2쪽</button><button type="button" data-sp="3">3쪽</button><button type="button" data-sp="4">4쪽</button></span></span><small>수리논술 · 생명논술 · 메디컬 46개교 기출을 공식 문항카드로 정리</small></h1>
+  <h1>논술 기출 지도<button type="button" class="guidebtn" id="guideBtn">이용 가이드</button><button type="button" class="guidebtn" id="pickBtn">학교 다시 고르기</button><button type="button" class="guidebtn" id="pdfBtn" title="담은 문항을 한 PDF로 합치기">문항 PDF<span id="pdfN"></span></button><button type="button" class="guidebtn" id="offBtn" title="모든 문제·그림·해설을 이 기기에 받아 두면 인터넷 없이도 열려요">오프라인 저장</button><span class="dlwrap"><button type="button" class="guidebtn" id="sheetBtn" aria-expanded="false" aria-controls="sheetMenu">답안지 다운로드</button><span class="dlmenu" id="sheetMenu" hidden role="group" aria-label="답안지 쪽 수"><span class="dlh">빈 답안지 PDF</span><button type="button" data-sp="1">1쪽</button><button type="button" data-sp="2">2쪽</button><button type="button" data-sp="3">3쪽</button><button type="button" data-sp="4">4쪽</button></span></span><small>수리논술 · 생명논술 · 메디컬 46개교 기출을 공식 문항카드로 정리</small></h1>
   <div class="stats" id="stats"><div><b>46</b>학교</div><div><b>2,945</b>문항</div><div><b>3,632</b>점수 기록</div></div>
 </div></header>
 <nav class="tabs" aria-label="보기"><div class="wrap">
@@ -732,6 +766,8 @@ mjx-assistive-mml{max-width:100%!important;right:0}
     <button class="btn" type="button" id="svClose">← 목록</button>
     <div class="ttl" id="svTitle"></div>
     <div class="row">
+      <button class="btn" type="button" id="svPick" aria-pressed="false" title="PDF로 합칠 목록에 담기">☆ 담기</button>
+      <button class="btn" type="button" id="svPdf" title="이 문항만 PDF로 저장">PDF</button>
       <button class="btn" type="button" id="svPrev" title="이전 문항 (←)">이전</button>
       <button class="btn" type="button" id="svNext" title="다음 문항 (→)">다음</button>
     </div>
@@ -778,6 +814,8 @@ mjx-assistive-mml{max-width:100%!important;right:0}
 <form class="askf" id="askForm"><textarea id="askIn" rows="2" placeholder="예: 평균값 정리는 왜 닫힌구간 연속이 필요해?" aria-label="개념 질문"></textarea><button type="submit" class="btn" id="askGo">묻기</button></form>
 <p class="askn" id="askNote"></p></section>
 <div class="onb" id="onb" hidden role="dialog" aria-modal="true" aria-labelledby="onbT"><div class="onb-box" id="onbBox"></div></div>
+<div class="onb pdfp" id="pdfp" hidden role="dialog" aria-modal="true" aria-labelledby="pdfT"><div class="onb-box" id="pdfBox"></div></div>
+<div id="printArea" aria-hidden="true"></div>
 <footer><div class="wrap">각 대학의 선행학습 영향평가 보고서(문항카드), 입학처 자료집·입시결과를 바탕으로 정리했어요. “(추정)”이 붙은 부분과 예측은 기출 분석에서 나온 판단이고, 대학의 공식 정답이나 출제 정보가 아니에요. 원본 쪽 이미지는 대학 자료(무단 복제·전재 금지)라 개인 공부용으로만 쓰고 링크를 공유하지 마세요. 문항과 원본 쪽은 자동으로 연결해서 가끔 다른 쪽이 열릴 수 있어요. 정리 기준일 2026-11-21.</div></footer>
 
 <script>window.MathJax={tex:{inlineMath:[["\\(","\\)"]],displayMath:[["\\[","\\]"]]},svg:{fontCache:"global"},startup:{typeset:false}};</script>
@@ -996,7 +1034,7 @@ function qDisp(q){q=String(q||'');if(/번/.test(q))return q;return q.replace(/(?
 function card(i){
   const tags=i.tags.map(t=>`<button type="button" class="tag${META.rareSet.has(t)?' rare':''}" data-tag="${esc(t)}" title="${esc(tagDesc(t)||'이 논리를 쓴 문항 보기')}">${esc(tagName(t))}</button>`).join('');
   const st=rec.get(i.id).st,o=ORIG[i.id];
-  return `<article class="card" tabindex="0" data-i="${i.id}"><div class="hd"><b>${esc(disp(i.s))}</b><span>${esc(i.y)}</span><span class="pill${i.k!=='본'?' mock':''}">${esc(kDisp(i))}</span>${trPill(i)}<span class="sess" title="${esc(gTip(i))}">${esc(gDisp(i))}${sess(i)&&sess(i).e?'<sup>추정</sup>':''}</span><span>${esc(qDisp(i.q))}</span></div>
+  return `<article class="card" tabindex="0" data-i="${i.id}"><div class="hd"><b>${esc(disp(i.s))}</b><span>${esc(i.y)}</span><span class="pill${i.k!=='본'?' mock':''}">${esc(kDisp(i))}</span>${trPill(i)}<span class="sess" title="${esc(gTip(i))}">${esc(gDisp(i))}${sess(i)&&sess(i).e?'<sup>추정</sup>':''}</span><span>${esc(qDisp(i.q))}</span>${pickBtn(i.id)}</div>
   ${i.u?`<div class="unit">${esc(i.u)}</div>`:''}<div class="pv" data-pv="${i.id}"><p>${texInline(i.idea)}</p></div>${i.key?`<div class="key">${texInline(i.key)}</div>`:''}<div class="tags">${tags}</div><div class="open">${o&&o.q.length?'문제 열기 →':'요약만 있음 · 열기 →'}${st?`<span class="st ${st}">${ST_LAB[st]}</span>`:''}</div></article>`;
 }
 const yr=i=>parseInt(i.y)||0;
@@ -1515,6 +1553,7 @@ async function showSolve(){
   $('#svSrc').textContent='';
   $('#solve .body').scrollTop=0;
   if(window.NSM&&NSM.onShow)NSM.onShow(i);
+  if(typeof pdfSync==='function')pdfSync();
   const box=$('#svPages');
   {const oa=document.getElementById('ansArea');if(oa)oa.remove()}
   const none=QNONE[i.id];
@@ -1604,7 +1643,7 @@ Promise.all(['meta.json','items.json','scores_idx.json','hide.json','idmap.json'
   // 이 탭에서 쓰던 검색·필터 되살리기
   try{const f=JSON.parse(sessionStorage.getItem('nsm:flt')||'null');if(f)for(const [k,v] of Object.entries(f)){const el=$(k);if(!el)continue;if(el.type==='checkbox')el.checked=!!v;else if(el.tagName!=='SELECT'||[...el.options].some(o=>o.value===v))el.value=v}}catch(e){}CBX.forEach(c=>c.sync&&c.sync());
   ['#iq','#fs','#fk','#fg','#ft','#fy','#fm','#fo','#fr','#fh','#fsort'].forEach(k=>{const el=$(k);if(el)el.addEventListener(el.type==='search'?'input':'change',()=>{try{const f={};['#iq','#fs','#fk','#fg','#ft','#fy','#fm','#fo','#fr','#fh','#fsort'].forEach(q=>{const e=$(q);if(e)f[q]=e.type==='checkbox'?e.checked:e.value});sessionStorage.setItem('nsm:flt',JSON.stringify(f))}catch(e){}})})
-  applyItems();renderSchoolGrid();applyScores();route();
+  applyItems();renderSchoolGrid();applyScores();route();pdfSync();
   // 새로고침 전 화면: 스크롤 위치, 열어 둔 문제, 필기 패널
   try{const y=+sessionStorage.getItem('nsm:sc:'+location.hash);if(y)setTimeout(()=>window.scrollTo(0,y),700)}catch(e){}
   {const qs=new URLSearchParams(location.search),qid=qs.get('q');
@@ -1646,6 +1685,7 @@ function onbGuide(){const box=$('#onbBox');const mine=[...FAV.d.s].map(sName);
    <li><span class="n">3</span><div><b>AI 채점</b><p>웹 답안지에 쓰거나, 「종이 답안」 PDF에 풀고 사진을 올리면 학교 채점 기준으로 채점·첨삭해 줘요. <strong>「AI 채점」은 한 번만 누르고 기다리세요.</strong> 버튼이 「채점 중 ○초」로 바뀌고 보통 1~2분 걸려요.</p></div></li>
    <li><span class="n">4</span><div><b>추가 학습</b><p>풀고 나면 「추가 학습」에서 관련 기출과 그 문제에 쓰인 발상·정석 논리를 이어서 봐요.</p></div></li>
    <li><span class="n">5</span><div><b>풀이 논리 · 개념 질문</b><p>「필수 개념」 맨 위 행동강령은 「이 조건이면 → 이렇게」로 정리돼 있어요. 개념 글에서 「개념 질문」으로 AI에게 물을 수 있어요.</p></div></li>
+   <li><span class="n">6</span><div><b>문항 PDF</b><p>문제 화면의 「PDF」로 그 문항만, 「☆ 담기」로 모은 문항은 맨 위 「문항 PDF」에서 순서를 정해 한 파일로 저장해요. 인쇄 창에서 「PDF로 저장」을 고르세요.</p></div></li>
   </ol>
   <h4 class="onb-sec">앱으로 쓰기</h4>
   <ol class="onb-steps">
@@ -1661,7 +1701,7 @@ function onbGuide(){const box=$('#onbBox');const mine=[...FAV.d.s].map(sName);
      <li>「내 파일 → 다운로드」에서 열기 → 「이 출처 허용」 → 「설치」</li>
      <li>막히면: 삼성 「자동 차단」 잠시 끄기, Play 프로텍트는 「무시하고 설치」</li>
     </ol>
-    <p>새 기능은 다시 설치 없이 적용돼요. 아이폰은 1번을 쓰세요.</p></div></li>
+    <p>새 기능은 다시 설치 없이 적용돼요. 단, 앱에서 문항 PDF를 쓰려면 1.1 버전이 필요해요(예전에 설치했다면 APK를 다시 받아 덮어 설치). 아이폰은 1번을 쓰세요.</p></div></li>
    <li><span class="n">3</span><div><b>오프라인 저장</b>
     <ul class="onb-sub">
      <li><b>하는 일</b>모든 문제·그림·해설·문서를 기기에 받아 둬요(약 160MB, 와이파이 권장).</li>
@@ -1768,6 +1808,60 @@ function onbMaybe(){let seen=null;try{seen=localStorage.getItem('nsm:onb')}catch
   if(navigator.webdriver&&!sp.has('onb'))return;
   if(!seen&&!sp.has('q')){ONBF=true;onbOpen('pick')}}
 
+
+/* ---------- 문항 PDF: 담기 · 병합 · 저장 ---------- */
+const PDFQ={get(){try{const a=JSON.parse(localStorage.getItem('nsm:pdfq')||'[]');return Array.isArray(a)?a.filter(x=>ITEMS&&ITEMS[x]):[]}catch(e){return []}},
+  set(a){try{localStorage.setItem('nsm:pdfq',JSON.stringify(a))}catch(e){}pdfSync()},
+  has(id){return this.get().includes(id)},
+  toggle(id){const a=this.get();const k=a.indexOf(id);if(k<0)a.push(id);else a.splice(k,1);this.set(a);return k<0}};
+function pickBtn(id){const on=PDFQ.has(id);return `<button type="button" class="qpick" data-qpick="${id}" aria-pressed="${on}" title="PDF로 합칠 목록에 담기">${on?'★ 담음':'☆ 담기'}</button>`}
+function pdfTitle(i){return `${disp(i.s)} ${i.y} ${kDisp(i)} · ${gDisp(i)} · ${qDisp(i.q)}`}
+function pdfSync(){const n=PDFQ.get().length;const e=$('#pdfN');if(e)e.textContent=n?` (${n})`:'';
+  document.querySelectorAll('[data-qpick]').forEach(b=>{const on=PDFQ.has(+b.dataset.qpick);b.setAttribute('aria-pressed',on);b.textContent=on?'★ 담음':'☆ 담기'});
+  if(typeof svCur!=='undefined'&&svCur){const on=PDFQ.has(svCur.id);$('#svPick').setAttribute('aria-pressed',on);$('#svPick').textContent=on?'★ 담음':'☆ 담기'}}
+// 카드 안 담기 버튼: 카드 열기보다 먼저 받는다
+document.addEventListener('click',e=>{const b=e.target.closest('[data-qpick]');if(!b)return;e.preventDefault();e.stopPropagation();PDFQ.toggle(+b.dataset.qpick)},true);
+$('#svPick').onclick=()=>{if(svCur)PDFQ.toggle(svCur.id)};
+$('#svPdf').onclick=()=>{if(svCur)pdfMake([svCur.id],{ans:pdfOpt('ans'),pb:true},$('#svPdf'))};
+function pdfOpt(k){try{const v=localStorage.getItem('nsm:pdf:'+k);return k==='pb'?v!=='0':v==='1'}catch(e){return k==='pb'}}
+function pdfOptSet(k,v){try{localStorage.setItem('nsm:pdf:'+k,v?'1':'0')}catch(e){}}
+function pdfPanel(){const box=$('#pdfBox');const a=PDFQ.get();
+  box.innerHTML=`<h3 id="pdfT">문항 PDF</h3><p class="sub">담은 문항을 순서대로 한 PDF로 합쳐요. 문제 화면이나 카드의 「☆ 담기」로 담아요.</p>
+  ${a.length?`<ol class="pdf-list">${a.map((id,k)=>{const i=ITEMS[id];return `<li><span class="no">${k+1}</span><span class="t">${esc(disp(i.s))} ${esc(i.y)} ${esc(kDisp(i))} · ${esc(qDisp(i.q))}<small>${esc(gDisp(i))} · ${esc(i.subj||'')}</small></span><button type="button" data-mv="${k}" data-d="-1" aria-label="위로" ${k?'':'disabled'}>↑</button><button type="button" data-mv="${k}" data-d="1" aria-label="아래로" ${k<a.length-1?'':'disabled'}>↓</button><button type="button" data-rm="${id}" aria-label="빼기">✕</button></li>`}).join('')}</ol>`:'<div class="empty" style="margin:10px 0">아직 담은 문항이 없어요.</div>'}
+  <div class="pdf-opts"><label><input type="checkbox" id="pdfAns" ${pdfOpt('ans')?'checked':''}>예시답안·해설 포함</label><label><input type="checkbox" id="pdfPb" ${pdfOpt('pb')?'checked':''}>문항마다 새 쪽에서 시작</label></div>
+  <div class="onb-foot"><button type="button" class="btn" id="pdfClr" ${a.length?'':'disabled'}>모두 빼기</button><button type="button" class="btn" id="pdfX">닫기</button><button type="button" class="btn primary" id="pdfGo" ${a.length?'':'disabled'}>PDF로 저장 (${a.length}문항)</button></div>`;
+  $('#pdfAns').onchange=e=>pdfOptSet('ans',e.target.checked);$('#pdfPb').onchange=e=>pdfOptSet('pb',e.target.checked);
+  box.querySelectorAll('[data-mv]').forEach(b=>b.onclick=()=>{const a=PDFQ.get(),k=+b.dataset.mv,d=+b.dataset.d;[a[k],a[k+d]]=[a[k+d],a[k]];PDFQ.set(a);pdfPanel()});
+  box.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{PDFQ.toggle(+b.dataset.rm);pdfPanel()});
+  $('#pdfClr').onclick=()=>{if(confirm('담은 문항을 모두 뺄까요?')){PDFQ.set([]);pdfPanel()}};
+  $('#pdfX').onclick=pdfClose;
+  $('#pdfGo').onclick=()=>pdfMake(PDFQ.get(),{ans:pdfOpt('ans'),pb:pdfOpt('pb')},$('#pdfGo'))}
+function pdfOpen(){$('#pdfp').hidden=false;pdfPanel();setTimeout(()=>{const g=$('#pdfGo');if(g)g.focus()},50)}
+function pdfClose(){$('#pdfp').hidden=true}
+$('#pdfBtn').onclick=pdfOpen;
+$('#pdfp').addEventListener('click',e=>{if(e.target.id==='pdfp')pdfClose()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#pdfp').hidden)pdfClose()});
+// 문항을 인쇄용 영역에 그린 뒤 브라우저 인쇄(→ PDF로 저장). 안드로이드 앱은 앱의 인쇄 기능을 쓴다
+let PDF_RUN=false;
+async function pdfMake(ids,opt,btn){
+  if(PDF_RUN||!ids.length)return;PDF_RUN=true;const lab=btn?btn.textContent:'';const area=$('#printArea');area.innerHTML='';
+  const so=showOrig;showOrig=false;
+  try{
+    const d=new Date();area.insertAdjacentHTML('beforeend',`<div class="pa-cover">논술 기출 지도 · ${ids.length}문항 · ${d.getFullYear()}.${d.getMonth()+1}.${d.getDate()}</div>`);
+    for(let n=0;n<ids.length;n++){const i=ITEMS[ids[n]];if(!i)continue;if(btn)btn.textContent=`만드는 중 ${n+1}/${ids.length}`;
+      const sec=document.createElement('section');sec.className='pa-item'+(opt.pb&&n>0?' pb':'');
+      sec.innerHTML=`<h2>${ids.length>1?(n+1)+'. ':''}${esc(pdfTitle(i))}</h2>`;area.appendChild(sec);
+      const o=ORIG[i.id]||{q:[],a:[]};const box=document.createElement('div');box.className='pages';sec.appendChild(box);
+      if(QNONE[i.id]||!o.q.length){box.innerHTML=`<div class="typed"><p><b>문제 원문 없음</b> — 문항 요약: ${texInline(i.idea||'')}</p></div>`;if(window.MathJax&&MathJax.typesetPromise)await MathJax.typesetPromise([box]).catch(()=>{})}
+      else await showKeys(o.q,box);
+      if(opt.ans&&o.a&&o.a.length){sec.insertAdjacentHTML('beforeend','<h3 class="pa-ans">예시답안·해설</h3>');const b2=document.createElement('div');b2.className='pages';sec.appendChild(b2);await showKeys(o.a,b2)}}
+    await Promise.all([...area.querySelectorAll('img')].map(im=>im.decode?im.decode().catch(()=>{}):null));
+  }finally{showOrig=so;PDF_RUN=false;if(btn)btn.textContent=lab}
+  const name=ids.length===1?pdfTitle(ITEMS[ids[0]]):`논술 기출 ${ids.length}문항`;const t0=document.title;document.title=name;
+  if(window.NSMAndroid&&typeof NSMAndroid.print==='function'){try{NSMAndroid.print(name)}catch(e){}setTimeout(()=>{document.title=t0},4000)}
+  else if(window.NSMAndroid){document.title=t0;alert('앱에서 PDF로 저장하려면 앱을 새 버전으로 다시 설치해 주세요(이용 가이드 → 앱으로 쓰기 → APK 받기). 브라우저(Chrome)로 열면 지금 바로 돼요.')}
+  else{const done=()=>{document.title=t0;window.removeEventListener('afterprint',done)};window.addEventListener('afterprint',done);window.print();setTimeout(done,60000)}
+}
 window.NSM={cur:()=>svCur,open:id=>openSolve(id),orig:id=>ORIG[id],
   title:id=>cardTitle(ITEMS[id]),n:()=>ITEMS.length,
   info:i=>({school:disp(i.s),s:i.s,year:i.y,k:i.k,q:i.q,g:i.g}),
