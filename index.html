@@ -583,6 +583,27 @@ h2{font-size:1.55rem;margin:0 0 16px;letter-spacing:-.01em}
   .cdoc{padding:16px 14px}
 }
 html{touch-action:manipulation;-webkit-text-size-adjust:100%}
+/* [콤팩트 문서] 학교별 분석·필수 개념: 낱말 중간 줄바꿈 금지, 자간 살짝 좁힘, 목록은 촘촘히(1.7), 굵은 핵심어가 먼저 눈에 들어오게 */
+.doc,.cdoc{overflow-wrap:break-word;word-break:keep-all;letter-spacing:-.012em}
+.doc li,.cdoc li{line-height:1.7}
+.doc li+li,.cdoc li+li{margin-top:.38em}
+.doc ul,.doc ol,.cdoc ul,.cdoc ol{margin:.4em 0 .9em;padding-left:1.25em}
+.doc li>ul,.doc li>ol,.cdoc li>ul,.cdoc li>ol{margin:.25em 0 .1em}
+.doc li li,.cdoc li li{font-size:.95em;color:#374151}
+.doc li::marker,.cdoc li::marker{color:var(--muted)}
+.doc li>strong:first-child,.cdoc li>strong:first-child,.doc p>strong:first-child,.cdoc p>strong:first-child{color:#111827;font-weight:700}
+.doc p,.cdoc p{margin:0 0 .75em}
+.doc h3,.cdoc h3{margin:1.2em 0 .35em}
+.doc th,.doc td,.cdoc th,.cdoc td{word-break:keep-all;overflow-wrap:break-word;line-height:1.55}
+.doc th,.cdoc th{white-space:nowrap}
+.doc td:first-child,.cdoc td:first-child{min-width:4.5em}
+.doc blockquote,.cdoc blockquote{line-height:1.7}
+.doclay>*,.docbody,.doclay .toc{min-width:0;max-width:100%}
+.docbody .tw,.cdoc .tw{max-width:100%}
+.doc li mjx-container[display="true"],.cdoc li mjx-container[display="true"]{min-width:0!important;max-width:100%;overflow-x:auto}
+.doc li,.cdoc li{min-width:0}
+/* 화면 낭독용 수식 사본(보이지 않음)이 쪽 너비를 넓히지 않게 */
+mjx-assistive-mml{max-width:100%!important;right:0}
 </style>
 
 <header class="top"><div class="wrap">
@@ -1637,26 +1658,48 @@ $('#sheetMenu').addEventListener('click',async e=>{const b=e.target.closest('[da
 // 오프라인 저장: 모든 데이터 파일(암호화된 채)을 기기 저장소에 받아 둔다 → 인터넷 없이도 모든 문제·그림·해설·문서가 열린다(AI 채점만 인터넷 필요)
 const OFF_LIBS=['https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg.js','https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js','https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js','https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js']
   .concat(['ams','boldsymbol','cancel','cases','color','mathtools','braket','enclose','extpfeil','gensymb','mhchem','newcommand','noerrors','noundefined','upgreek','unicode','textmacros','textcomp','bbox','centernot','colortbl','configmacros','tagformat','html','action','verb','empheq','amscd','physics'].map(x=>'https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/input/tex/extensions/'+x+'.js'));
-function offLabel(){const b=$('#offBtn');if(!b)return;let d='';try{d=localStorage.getItem('nsm:offline')||''}catch(e){}b.textContent=d?'오프라인 준비됨':'오프라인 저장';b.title=d?('모든 자료를 '+d+'에 이 기기에 받아 뒀어요. 다시 누르면 최신 자료로 새로 받아요.'):'모든 문제·그림·해설을 이 기기에 받아 두면 인터넷 없이도 열려요'}
-let OFF_RUN=false;
+function offLabel(){const b=$('#offBtn');if(!b)return;let d='';try{d=localStorage.getItem('nsm:offline')||''}catch(e){}b.textContent=d?'오프라인 준비됨':'오프라인 저장';b.title=d?('자료를 '+d+'에 이 기기에 받아 뒀어요. 다시 누르면 기기에 없거나 바뀐 파일만 골라 받아요.'):'모든 문제·그림·해설을 이 기기에 받아 두면 인터넷 없이도 열려요'}
+let OFF_RUN=false;const OFF_C='nsm-v1';
+const hex16=async buf=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',buf))].slice(0,8).map(x=>x.toString(16).padStart(2,'0')).join('');
+// 기기 저장소(캐시)에 있는 암호화본의 해시를 목록(files.json)의 해시와 비교 → 없거나 바뀐 파일만 고른다
+async function offScan(L,onp){
+  const files=L.files||[],H=L.h||{};if(!('caches' in window)||!crypto.subtle)return {need:files.slice(),have:0,libNeed:OFF_LIBS.slice()};
+  const c=await caches.open(OFF_C);const need=[];let have=0,k=0;
+  const q=files.slice();await Promise.all(Array.from({length:8},async()=>{while(q.length){const f=q.shift();let ok=false;
+    try{const u=new URL(window.__encUrl?await window.__encUrl(f):f,location.href);const hit=await c.match(u.origin+u.pathname);
+      if(hit){ok=!H[f]||(await hex16(await hit.arrayBuffer()))===H[f]}}catch(e){}
+    ok?have++:need.push(f);k++;if(onp&&k%50===0)onp(k,files.length)}}));
+  const libNeed=[];for(const u of OFF_LIBS){let hit=null;try{hit=await c.match(u)}catch(e){}if(!hit)libNeed.push(u)}
+  return {need,have,libNeed}}
 async function offlineSave(){
   if(OFF_RUN)return;const b=$('#offBtn');
-  let L;try{L=await fetch('files.json').then(r=>r.json())}catch(e){alert('파일 목록을 받지 못했어요. 인터넷 연결을 확인해 주세요.');return}
-  const mb=Math.round((L.bytes||0)/1e6);
-  if(!confirm(`모든 문제·그림·해설·문서(약 ${mb}MB)를 이 기기에 받아 둘까요?\n와이파이에서 하는 것을 권해요. 받는 동안 화면을 켜 두세요.`))return;
+  let L;try{L=await fetch('files.json',{cache:'reload'}).then(r=>r.json())}catch(e){alert('파일 목록을 받지 못했어요. 인터넷 연결을 확인해 주세요.');return}
+  OFF_RUN=true;b.disabled=true;let S;
+  try{S=await offScan(L,(k,n)=>{b.textContent=`기기 확인 중 ${Math.floor(k/n*100)}%`})}catch(e){S={need:(L.files||[]).slice(),have:0,libNeed:OFF_LIBS.slice()}}
+  OFF_RUN=false;b.disabled=false;offLabel();
+  const total=(L.files||[]).length,sz=L.s||{};
+  if(!S.need.length&&!S.libNeed.length){const d=new Date();try{localStorage.setItem('nsm:offline',`${d.getMonth()+1}월 ${d.getDate()}일`)}catch(e){}offLabel();
+    alert(`이 기기에 이미 모두 저장돼 있어요(파일 ${total}개 전부 최신).\n인터넷이 없어도 모든 문제·그림·해설·문서가 열려요. (AI 채점만 인터넷이 필요해요)`);return}
+  const nb=S.need.reduce((a,f)=>a+(sz[f]||0),0);const mb=Math.max(1,Math.round((L.s?nb:(L.bytes||0))/1e6));
+  const msg=S.have?`이 기기에 이미 ${S.have}개 파일이 저장돼 있어요.\n없거나 바뀐 ${S.need.length}개(약 ${mb}MB)만 받을까요?`:`모든 문제·그림·해설·문서(파일 ${S.need.length}개, 약 ${mb}MB)를 이 기기에 받아 둘까요?`;
+  if(!confirm(msg+'\n와이파이에서 하는 것을 권해요. 받는 동안 화면을 켜 두세요.'))return;
   OFF_RUN=true;try{if(navigator.storage&&navigator.storage.persist)await navigator.storage.persist()}catch(e){}
-  const files=L.files||[];const all=files.length+OFF_LIBS.length;let done=0,fail=0;
-  const tick=()=>{b.textContent=`받는 중 ${Math.floor(done/all*100)}%`};tick();b.disabled=true;
-  const one=async f=>{try{const u=window.__encUrl?await window.__encUrl(f):f;const r=await fetch(u,{cache:'reload'});if(!r.ok)fail++;else await r.arrayBuffer()}catch(e){fail++}done++;if(done%10===0||done===all)tick()};
-  const lib=async u=>{try{const r=await fetch(u,{mode:'no-cors',cache:'reload'});await r.arrayBuffer().catch(()=>{})}catch(e){fail++}done++;tick()};
-  // 앱 껍데기(첫 화면·열쇠·아이콘)도 받아 둔다: 오프라인에서 처음 열 때 필요
-  for(const s of ['./','key.json','manifest.webmanifest','icon-192.png','icon-180.png','icon-512.png']){try{await fetch(new URL(s,location.href).href,{cache:'reload'}).then(r=>r.arrayBuffer())}catch(e){}}
-  const q=files.slice();await Promise.all(Array.from({length:6},async()=>{while(q.length)await one(q.shift())}));
-  for(const u of OFF_LIBS)await lib(u);
+  let c=null;try{c=await caches.open(OFF_C)}catch(e){}
+  const all=S.need.length+S.libNeed.length;let done=0,fail=0;
+  const tick=()=>{b.textContent=`받는 중 ${Math.floor(done/Math.max(1,all)*100)}%`};tick();b.disabled=true;
+  // 받은 파일은 직접 기기 저장소에 넣는다(서비스 워커가 아직 이 페이지를 맡지 않았어도 저장되게)
+  const one=async f=>{try{const u=new URL(window.__encUrl?await window.__encUrl(f):f,location.href);const r=await fetch(u.href,{cache:'reload'});if(!r.ok)fail++;else if(c)await c.put(u.origin+u.pathname,r.clone()).then(()=>r.arrayBuffer());else await r.arrayBuffer()}catch(e){fail++}done++;if(done%10===0||done===all)tick()};
+  const lib=async u=>{try{const r=await fetch(u,{mode:'no-cors',cache:'reload'});if(c)await c.put(u,r.clone());await r.arrayBuffer().catch(()=>{})}catch(e){fail++}done++;tick()};
+  // 앱 껍데기(첫 화면·열쇠·아이콘)는 작으니 늘 새로 받는다
+  for(const s of ['./','key.json','manifest.webmanifest','icon-192.png','icon-180.png','icon-512.png']){try{const u=new URL(s,location.href);const r=await fetch(u.href,{cache:'reload'});if(r.ok&&c)await c.put(u.origin+u.pathname,r.clone());await r.arrayBuffer()}catch(e){}}
+  const q=S.need.slice();await Promise.all(Array.from({length:6},async()=>{while(q.length)await one(q.shift())}));
+  for(const u of S.libNeed)await lib(u);
+  // 받은 뒤 다시 확인: 정말 기기에 저장됐는지
+  let left=S.need.length;try{b.textContent='저장 확인 중';const R=await offScan(L);left=R.need.length+R.libNeed.length}catch(e){}
   OFF_RUN=false;b.disabled=false;
-  if(fail>Math.max(3,all*0.01)){b.textContent='오프라인 저장';alert(`일부 파일(${fail}개)을 받지 못했어요. 인터넷 연결을 확인하고 다시 눌러 주세요.`);return}
+  if(left>0){offLabel();alert(`${left}개 파일이 아직 기기에 저장되지 않았어요${fail?`(받기 실패 ${fail}개)`:''}. 인터넷 연결을 확인하고 다시 눌러 주세요. 다시 누르면 남은 파일만 받아요.`);return}
   const d=new Date();try{localStorage.setItem('nsm:offline',`${d.getMonth()+1}월 ${d.getDate()}일`)}catch(e){}offLabel();
-  alert('다 받았어요. 이제 인터넷이 없어도 모든 문제·그림·해설·문서가 열려요. (AI 채점만 인터넷이 필요해요)\n자료가 새로 올라오면 이 버튼을 다시 눌러 최신으로 받으세요.')}
+  alert(`다 받았어요. 파일 ${total}개가 모두 이 기기에 저장된 것을 확인했어요.\n이제 인터넷이 없어도 모든 문제·그림·해설·문서가 열려요. (AI 채점만 인터넷이 필요해요)\n자료가 새로 올라오면 이 버튼을 다시 누르세요. 바뀐 파일만 받아요.`)}
 $('#offBtn').addEventListener('click',offlineSave);offLabel();
 
 // 개념 질문: 필수 개념 탭에서 지금 보는 개념 글을 근거로 개념만 묻고 답한다(AI 채점과 같은 키·예산)
