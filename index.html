@@ -601,6 +601,15 @@ html{touch-action:manipulation;-webkit-text-size-adjust:100%}
 .pdf-opts label{display:flex;gap:6px;align-items:center}
 @media (max-width:480px){#solve .bar .row{gap:4px}#solve .bar .row .btn{padding:6px 8px;font-size:.84rem;min-width:0}}
 #printArea{display:none}
+#printArea.pa-screen{display:block;position:absolute;left:-12000px;top:0;width:698px;background:#fff;color:#111;font-size:15px;line-height:1.7}
+#printArea.pa-screen .pa-item{padding:2px 0 6px}
+#printArea.pa-screen .pa-cover{font-size:12px;color:#555;border-bottom:1px solid #999;padding-bottom:4px;margin-bottom:10px}
+#printArea.pa-screen h2{font-size:17px;margin:0 0 8px}
+#printArea.pa-screen h3.pa-ans{font-size:15px;margin:14px 0 6px;padding-top:6px;border-top:1px dashed #999}
+#printArea.pa-screen .typed{border:0;box-shadow:none;padding:0;max-width:none;background:none}
+#printArea.pa-screen .pages{display:block}
+#printArea.pa-screen img{max-width:100%;height:auto;display:block;margin:6px 0}
+#printArea.pa-screen mjx-container[display="true"]{overflow:visible!important}
 .pq-bar{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 -4px}
 .pq-bar .btn{font-size:.84rem;padding:6px 12px}
 .pq-bar [aria-pressed="true"]{color:#b45309;border-color:#f59e0b;background:#fffbeb}
@@ -1698,7 +1707,7 @@ function onbGuide(){const box=$('#onbBox');const mine=[...FAV.d.s].map(sName);
    <li><span class="n">3</span><div><b>AI 채점</b><p>웹 답안지에 쓰거나, 「종이 답안」 PDF에 풀고 사진을 올리면 학교 채점 기준으로 채점·첨삭해 줘요. <strong>「AI 채점」은 한 번만 누르고 기다리세요.</strong> 버튼이 「채점 중 ○초」로 바뀌고 보통 1~2분 걸려요.</p></div></li>
    <li><span class="n">4</span><div><b>추가 학습</b><p>풀고 나면 「추가 학습」에서 관련 기출과 그 문제에 쓰인 발상·정석 논리를 이어서 봐요.</p></div></li>
    <li><span class="n">5</span><div><b>풀이 논리 · 개념 질문</b><p>「필수 개념」 맨 위 행동강령은 「이 조건이면 → 이렇게」로 정리돼 있어요. 개념 글에서 「개념 질문」으로 AI에게 물을 수 있어요.</p></div></li>
-   <li><span class="n">6</span><div><b>문항 PDF</b><p>문제 화면의 「PDF」로 그 문항만, 「☆ 담기」로 모은 문항은 맨 위 「문항 PDF」에서 순서를 정해 한 파일로 저장해요. 인쇄 창에서 「PDF로 저장」을 고르세요.</p></div></li>
+   <li><span class="n">6</span><div><b>문항 PDF</b><p>문제 화면의 「PDF」로 그 문항만, 「☆ 담기」(2027 대비는 순위별 「모두 담기」)로 모은 문항은 맨 위 「문항 PDF」에서 순서를 정해 한 파일로 만들어요. 다 되면 「PDF 받기」를 한 번 더 누르세요.</p></div></li>
   </ol>
   <h4 class="onb-sec">앱으로 쓰기</h4>
   <ol class="onb-steps">
@@ -1714,7 +1723,7 @@ function onbGuide(){const box=$('#onbBox');const mine=[...FAV.d.s].map(sName);
      <li>「내 파일 → 다운로드」에서 열기 → 「이 출처 허용」 → 「설치」</li>
      <li>막히면: 삼성 「자동 차단」 잠시 끄기, Play 프로텍트는 「무시하고 설치」</li>
     </ol>
-    <p>새 기능은 다시 설치 없이 적용돼요. 단, 앱에서 문항 PDF를 쓰려면 1.1 버전이 필요해요(예전에 설치했다면 APK를 다시 받아 덮어 설치). 아이폰은 1번을 쓰세요.</p></div></li>
+    <p>새 기능은 다시 설치 없이 적용돼요. 아이폰은 1번을 쓰세요.</p></div></li>
    <li><span class="n">3</span><div><b>오프라인 저장</b>
     <ul class="onb-sub">
      <li><b>하는 일</b>모든 문제·그림·해설·문서를 기기에 받아 둬요(약 160MB, 와이파이 권장).</li>
@@ -1734,7 +1743,7 @@ $('#sheetMenu').addEventListener('click',async e=>{const b=e.target.closest('[da
   const btn=$('#sheetBtn'),t0=btn.textContent;btn.disabled=true;btn.textContent='만드는 중…';try{if(window.NSMBlankSheet)await NSMBlankSheet(n)}finally{btn.disabled=false;btn.textContent=t0}});
 
 // 오프라인 저장: 모든 데이터 파일(암호화된 채)을 기기 저장소에 받아 둔다 → 인터넷 없이도 모든 문제·그림·해설·문서가 열린다(AI 채점만 인터넷 필요)
-const OFF_LIBS=['https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg.js','https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js','https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js','https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js']
+const OFF_LIBS=['https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg.js','https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js','https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js','https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js','https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js']
   .concat(['ams','boldsymbol','cancel','cases','color','mathtools','braket','enclose','extpfeil','gensymb','mhchem','newcommand','noerrors','noundefined','upgreek','unicode','textmacros','textcomp','bbox','centernot','colortbl','configmacros','tagformat','html','action','verb','empheq','amscd','physics'].map(x=>'https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/input/tex/extensions/'+x+'.js'));
 function offLabel(){const b=$('#offBtn');if(!b)return;let d='';try{d=localStorage.getItem('nsm:offline')||''}catch(e){}b.textContent=d?'오프라인 준비됨':'오프라인 저장';b.title=d?('자료를 '+d+'에 이 기기에 받아 뒀어요. 다시 누르면 기기에 없거나 바뀐 파일만 골라 받아요.'):'모든 문제·그림·해설을 이 기기에 받아 두면 인터넷 없이도 열려요'}
 let OFF_RUN=false;const OFF_C='nsm-v1';
@@ -1849,18 +1858,78 @@ function pdfPanel(){const box=$('#pdfBox');const a=PDFQ.get();
   box.innerHTML=`<h3 id="pdfT">문항 PDF</h3><p class="sub">담은 문항을 순서대로 한 PDF로 합쳐요. 문제 화면이나 카드의 「☆ 담기」로 담아요.</p>
   ${a.length?`<ol class="pdf-list">${a.map((id,k)=>{const i=ITEMS[id];return `<li><span class="no">${k+1}</span><span class="t">${esc(disp(i.s))} ${esc(i.y)} ${esc(kDisp(i))} · ${esc(qDisp(i.q))}<small>${esc(gDisp(i))} · ${esc(i.subj||'')}</small></span><button type="button" data-mv="${k}" data-d="-1" aria-label="위로" ${k?'':'disabled'}>↑</button><button type="button" data-mv="${k}" data-d="1" aria-label="아래로" ${k<a.length-1?'':'disabled'}>↓</button><button type="button" data-rm="${id}" aria-label="빼기">✕</button></li>`}).join('')}</ol>`:'<div class="empty" style="margin:10px 0">아직 담은 문항이 없어요.</div>'}
   <div class="pdf-opts"><label><input type="checkbox" id="pdfAns" ${pdfOpt('ans')?'checked':''}>예시답안·해설 포함</label><label><input type="checkbox" id="pdfPb" ${pdfOpt('pb')?'checked':''}>문항마다 새 쪽에서 시작</label></div>
-  <div class="onb-foot"><button type="button" class="btn" id="pdfClr" ${a.length?'':'disabled'}>모두 빼기</button><button type="button" class="btn" id="pdfX">닫기</button><button type="button" class="btn primary" id="pdfGo" ${a.length?'':'disabled'}>PDF로 저장 (${a.length}문항)</button></div>`;
+  <div class="onb-foot"><button type="button" class="btn" id="pdfClr" ${a.length?'':'disabled'}>모두 빼기</button><button type="button" class="btn" id="pdfX">닫기</button><button type="button" class="btn" id="pdfPrint" ${a.length?'':'disabled'} title="글자가 더 선명해요(컴퓨터 권장)">인쇄 창으로</button><button type="button" class="btn primary" id="pdfGo" ${a.length?'':'disabled'}>PDF 파일 만들기 (${a.length}문항)</button></div>`;
   $('#pdfAns').onchange=e=>pdfOptSet('ans',e.target.checked);$('#pdfPb').onchange=e=>pdfOptSet('pb',e.target.checked);
   box.querySelectorAll('[data-mv]').forEach(b=>b.onclick=()=>{const a=PDFQ.get(),k=+b.dataset.mv,d=+b.dataset.d;[a[k],a[k+d]]=[a[k+d],a[k]];PDFQ.set(a);pdfPanel()});
   box.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{PDFQ.toggle(+b.dataset.rm);pdfPanel()});
   $('#pdfClr').onclick=()=>{if(confirm('담은 문항을 모두 뺄까요?')){PDFQ.set([]);pdfPanel()}};
   $('#pdfX').onclick=pdfClose;
-  $('#pdfGo').onclick=()=>pdfMake(PDFQ.get(),{ans:pdfOpt('ans'),pb:pdfOpt('pb')},$('#pdfGo'))}
+  $('#pdfGo').onclick=()=>pdfMake(PDFQ.get(),{ans:pdfOpt('ans'),pb:pdfOpt('pb')},$('#pdfGo'));
+  $('#pdfPrint').onclick=()=>pdfMake(PDFQ.get(),{ans:pdfOpt('ans'),pb:pdfOpt('pb'),print:true},$('#pdfPrint'))}
 function pdfOpen(){$('#pdfp').hidden=false;pdfPanel();setTimeout(()=>{const g=$('#pdfGo');if(g)g.focus()},50)}
 function pdfClose(){$('#pdfp').hidden=true}
 $('#pdfBtn').onclick=pdfOpen;
 $('#pdfp').addEventListener('click',e=>{if(e.target.id==='pdfp')pdfClose()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#pdfp').hidden)pdfClose()});
+
+// 인쇄 창 없이 PDF 파일 만들기: 문항마다 그림으로 찍어 A4 쪽에 나눠 붙인다(문단 경계에서 쪽 나눔)
+// → 휴대폰 브라우저(인쇄가 막히는 경우)·안드로이드 앱 1.0·오프라인에서도 「다운로드」로 받는다
+window.NSM_pdf={make:(ids,o)=>pdfMake(ids,o||{},null)};
+const PDF_H2C='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+function loadH2C(){if(window.html2canvas)return Promise.resolve();return new Promise((res,rej)=>{const sc=document.createElement('script');sc.src=PDF_H2C;sc.onload=res;sc.onerror=()=>rej(new Error('lib'));document.head.appendChild(sc)})}
+function inlineMjxUse(root){const NS='http://www.w3.org/2000/svg';
+  root.querySelectorAll('use').forEach(u=>{const ref=(u.getAttribute('xlink:href')||u.getAttribute('href')||'').replace(/^#/,'');const t=ref&&document.getElementById(ref);if(!t)return;
+    const g=document.createElementNS(NS,'g');let tr=u.getAttribute('transform')||'';const x=+u.getAttribute('x')||0,y=+u.getAttribute('y')||0;if(x||y)tr+=` translate(${x},${y})`;if(tr.trim())g.setAttribute('transform',tr.trim());
+    const c=t.cloneNode(true);c.removeAttribute('id');g.appendChild(c);u.replaceWith(g)})}
+let PDF_FILE=null;
+async function pdfFile(name,btn,lab){
+  const area=$('#printArea');area.classList.add('pa-screen');const items=[...area.querySelectorAll('.pa-item')];
+  const setB=t=>{if(btn){btn.disabled=!!t;btn.textContent=t||lab}};
+  try{
+    setB('PDF 준비 중…');await loadH2C();inlineMjxUse(area);area.querySelectorAll('mjx-assistive-mml').forEach(x=>x.remove());
+    if(document.fonts&&document.fonts.ready)await document.fonts.ready;
+    const PW=794,PH=1123,M=48,CW=PW-2*M,CH=PH-2*M,OS=2;  // A4 96dpi, 출력 2배
+    const pages=[];let pc=null,px=null,cy=0;
+    const newPage=()=>{pc=document.createElement('canvas');pc.width=PW*OS;pc.height=PH*OS;px=pc.getContext('2d');px.fillStyle='#fff';px.fillRect(0,0,pc.width,pc.height);pages.push(pc);cy=0};
+    const cover=area.querySelector('.pa-cover');
+    const blocks=[cover,...items].filter(Boolean);
+    // 찍기는 문항 하나만 든 작은 틀(iframe) 안에서: html2canvas가 문서 전체를 복제하느라 느려지는 것을 막는다(문항당 12초 → 1초 안팎)
+    const fr=document.createElement('iframe');fr.setAttribute('aria-hidden','true');fr.style.cssText=`position:absolute;left:-12000px;top:0;width:${CW}px;height:1200px;border:0`;
+    const css=[...document.querySelectorAll('style')].map(x=>x.textContent).join('\n');
+    const links=[...document.querySelectorAll('link[rel="stylesheet"]')].filter(l=>/fonts\.googleapis/.test(l.href)).map(l=>`<link rel="stylesheet" href="${l.href}">`).join('');
+    fr.srcdoc=`<!doctype html><html lang="ko"><head><meta charset="utf-8">${links}<style>${css}</style></head><body style="margin:0;background:#fff"><div id="printArea" class="pa-screen" style="position:static;left:0;width:${CW}px"></div></body></html>`;
+    document.body.appendChild(fr);await new Promise(r=>{fr.onload=r;setTimeout(r,4000)});
+    const fd=fr.contentDocument,fa=fd.getElementById('printArea');try{if(fd.fonts&&fd.fonts.ready)await Promise.race([fd.fonts.ready,new Promise(r=>setTimeout(r,3000))])}catch(e){}
+    try{
+    for(let n=0;n<blocks.length;n++){const src=blocks[n];setB(`PDF 만드는 중 ${Math.min(n+1,blocks.length)}/${blocks.length}`);
+      fa.innerHTML='';fa.appendChild(fd.importNode(src,true));const el=fa.firstElementChild;el.querySelectorAll('img').forEach(im=>{im.loading='eager'});
+      await Promise.all([...el.querySelectorAll('img')].map(im=>(im.complete&&im.naturalWidth)?null:new Promise(r=>{im.onload=im.onerror=r;setTimeout(r,8000)})));await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(()=>r())));
+      const r0=el.getBoundingClientRect();const w=Math.ceil(r0.width),h=Math.ceil(r0.height);if(!w||!h)continue;
+      // 문단·그림·식·표 줄의 아래 끝 = 쪽을 나눠도 되는 자리
+      const cuts=[...el.querySelectorAll('h2,h3,p,li,img,tr,table,mjx-container[display="true"],.noimg,.typed>*,blockquote,section.intent')].map(x=>x.getBoundingClientRect().bottom-r0.top).filter(v=>v>0&&v<=h+1).sort((a,b)=>a-b);
+      const sc=Math.min(OS,Math.sqrt(12e6/(w*h)));
+      const cv=await html2canvas(el,{scale:sc,backgroundColor:'#ffffff',logging:false,useCORS:true,windowWidth:CW});
+      const k=cv.width/w;  // 그림 px / CSS px
+      if(!pc||(el.classList.contains('pb')&&cy>0))newPage();
+      let y=0;
+      while(y<h-1){let room=CH-cy;if(room<60){newPage();room=CH}
+        let end=Math.min(h,y+room);
+        if(end<h){const ok=cuts.filter(c=>c>y+20&&c<=end);if(ok.length)end=ok[ok.length-1];else if(cy>0){newPage();continue}}
+        const sh=end-y;px.drawImage(cv,0,Math.round(y*k),cv.width,Math.round(sh*k),M*OS,(M+cy)*OS,CW*OS,sh*OS*(CW/w));
+        cy+=sh*(CW/w)+(end>=h?14:0);y=end;if(y<h-1)newPage()}
+    }
+    }finally{fr.remove()}
+    const jpgs=[];for(const c of pages){const b=await new Promise(r=>c.toBlob(r,'image/jpeg',0.86));jpgs.push({w:c.width,h:c.height,d:new Uint8Array(await b.arrayBuffer())})}
+    PDF_FILE={blob:window.NSMJpgPdf(jpgs),name:name.replace(/[\\/:*?"<>|]/g,' ')+'.pdf',pages:jpgs.length};
+    pdfReady();
+  }catch(e){alert(e&&e.message==='lib'?'PDF 도구를 불러오지 못했어요. 인터넷 연결을 확인하거나, 「오프라인 저장」을 한 번 해 두면 인터넷 없이도 돼요.':'PDF를 만들지 못했어요. 다시 눌러 주세요.')}
+  finally{area.classList.remove('pa-screen');setB('')}
+}
+// 다 만든 뒤 「PDF 받기」를 한 번 더 누르게 한다(휴대폰 브라우저는 사용자가 방금 누른 동작이 있어야 내려받기·공유를 허락함)
+function pdfReady(){if(!PDF_FILE)return;$('#pdfp').hidden=false;
+  $('#pdfBox').innerHTML=`<h3 id="pdfT">PDF를 만들었어요</h3><p class="sub">${esc(PDF_FILE.name)} · ${PDF_FILE.pages}쪽</p>
+  <div class="onb-foot"><button type="button" class="btn" id="pdfX2">닫기</button><button type="button" class="btn primary" id="pdfGet">PDF 받기</button></div>`;
+  $('#pdfX2').onclick=pdfClose;$('#pdfGet').onclick=async()=>{const r=await window.NSMSaveBlob(PDF_FILE.blob,PDF_FILE.name);if(r==='ok')pdfClose()};setTimeout(()=>$('#pdfGet').focus(),50)}
 // 문항을 인쇄용 영역에 그린 뒤 브라우저 인쇄(→ PDF로 저장). 안드로이드 앱은 앱의 인쇄 기능을 쓴다
 let PDF_RUN=false;
 async function pdfMake(ids,opt,btn){
@@ -1875,11 +1944,18 @@ async function pdfMake(ids,opt,btn){
       if(QNONE[i.id]||!o.q.length){box.innerHTML=`<div class="typed"><p><b>문제 원문 없음</b> — 문항 요약: ${texInline(i.idea||'')}</p></div>`;if(window.MathJax&&MathJax.typesetPromise)await MathJax.typesetPromise([box]).catch(()=>{})}
       else await showKeys(o.q,box);
       if(opt.ans&&o.a&&o.a.length){sec.insertAdjacentHTML('beforeend','<h3 class="pa-ans">예시답안·해설</h3>');const b2=document.createElement('div');b2.className='pages';sec.appendChild(b2);await showKeys(o.a,b2)}}
-    await Promise.all([...area.querySelectorAll('img')].map(im=>im.decode?im.decode().catch(()=>{}):null));
+    // 그림(figimg)은 나중에 채워지므로 다 채워질 때까지 기다린다(최대 10초)
+    area.querySelectorAll('img').forEach(im=>{im.loading='eager'});  // 늦게 읽기(lazy) 그림은 숨긴 영역에서 안 읽힌다
+    try{await hydrateFigs(area)}catch(e){}
+    {const t=Date.now();while([...area.querySelectorAll('img.figimg[data-fig]')].some(im=>!im.getAttribute('src'))&&Date.now()-t<10000)await new Promise(r=>setTimeout(r,100))}
+    await Promise.all([...area.querySelectorAll('img')].map(im=>Promise.race([im.decode?im.decode().catch(()=>{}):null,new Promise(r=>setTimeout(r,4000))])));
+    area.querySelectorAll('img.figimg').forEach(im=>{if(im.naturalWidth&&!im.style.width)im.style.width=Math.round(im.naturalWidth*0.6)+'px'});
   }finally{showOrig=so;PDF_RUN=false;if(btn)btn.textContent=lab}
-  const name=ids.length===1?pdfTitle(ITEMS[ids[0]]):`논술 기출 ${ids.length}문항`;const t0=document.title;document.title=name;
+  const name=ids.length===1?pdfTitle(ITEMS[ids[0]]):`논술 기출 ${ids.length}문항`;
+  if(!opt.print){await pdfFile(name,btn,lab);return}
+  const t0=document.title;document.title=name;
   if(window.NSMAndroid&&typeof NSMAndroid.print==='function'){try{NSMAndroid.print(name)}catch(e){}setTimeout(()=>{document.title=t0},4000)}
-  else if(window.NSMAndroid){document.title=t0;alert('앱에서 PDF로 저장하려면 앱을 새 버전으로 다시 설치해 주세요(이용 가이드 → 앱으로 쓰기 → APK 받기). 브라우저(Chrome)로 열면 지금 바로 돼요.')}
+  else if(window.NSMAndroid){document.title=t0;alert('이 앱 버전은 인쇄 창을 열 수 없어요. 「PDF 파일 만들기」를 쓰면 다운로드 폴더에 바로 저장돼요.')}
   else{const done=()=>{document.title=t0;window.removeEventListener('afterprint',done)};window.addEventListener('afterprint',done);window.print();setTimeout(done,60000)}
 }
 window.NSM={cur:()=>svCur,open:id=>openSolve(id),orig:id=>ORIG[id],
