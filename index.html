@@ -63,7 +63,7 @@
 </script>
 <title>논술</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hahmlet:wght@500;700&family=IBM+Plex+Sans+KR:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
 <style>
 /* Layout: 답안지 격자 머리띠 + 탭 바 아래 한 열 작업면. 검색 결과는 카드 목록, 그래프는 넓은 캔버스+옆 패널 */
@@ -127,7 +127,7 @@ body:has(#solve:not([hidden])) .askfab,body:has(#solve:not([hidden])) .askp{disp
 .onb-list button[aria-pressed="true"]{border-color:var(--blue);background:var(--blue-soft);color:var(--blue);font-weight:600}
 .onb-foot{display:flex;gap:8px;justify-content:flex-end;align-items:center;margin-top:16px;flex-wrap:wrap}
 .onb-foot .cnt{margin-right:auto;color:var(--muted);font-size:.88rem}
-.onb-steps{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:14px}
+.onb-sec{margin:14px 0 8px;padding-top:10px;border-top:1px solid var(--line);font-size:.95rem;color:var(--blue)}.onb-sec:first-of-type{margin-top:4px;padding-top:0;border-top:0}.onb-steps{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:14px}
 .onb-steps li{display:flex;gap:12px;align-items:flex-start}
 .onb-steps .n{flex:none;width:26px;height:26px;border-radius:50%;background:var(--blue);color:#fff;font-weight:700;font-size:.85rem;display:flex;align-items:center;justify-content:center;margin-top:2px}
 .onb-steps b{display:block;margin-bottom:2px}.onb-sub{margin:6px 0 4px;padding-left:1.2em;font-size:.9rem;line-height:1.6;color:#374151}.onb-sub li{display:list-item!important;margin:3px 0}.onb-sub b{display:inline;margin:0 6px 0 0;color:#111827}.onb-steps p+.onb-sub+p{margin-top:4px}.onb-steps p{margin:0;line-height:1.65;color:#374151;font-size:.93rem}
@@ -1573,12 +1573,14 @@ function migrateRec(){try{if(localStorage.getItem('mig:norm1')||!Object.keys(IDM
   const old=Object.keys(localStorage).filter(k=>/^rec:\d+$/.test(k));old.forEach(k=>localStorage.removeItem(k));
   for(const [n,a] of Object.entries(acc))localStorage.setItem('rec:'+n,JSON.stringify(a));
   localStorage.setItem('mig:norm1','1');window.__inkMig=IDMAP}catch(e){}}
+// 시작 데이터는 한꺼번에 요청한다(예전엔 sessions→sessq→orig→qnone을 하나씩 기다려 왕복이 4번 더 걸렸다)
+const P0=f=>fetch(f).then(r=>r.ok?r.json():{}).catch(()=>({}));const pSESS=P0('sessions.json'),pSESSQ=P0('sessq.json'),pORIG=P0('orig.json'),pQNONE=P0('qnone.json');
 Promise.all(['meta.json','items.json','scores_idx.json','hide.json','idmap.json','orignote.json'].map(f=>fetch(f).then(r=>r.json()).catch(()=>({})))).then(async([m,it,sc,hd,im,on])=>{IDMAP=im||{};ONOTE=on||{};migrateRec();
-  try{SESS=await fetch('sessions.json').then(r=>r.ok?r.json():{})}catch(e){SESS={}}
-  try{SESSQ=await fetch('sessq.json').then(r=>r.ok?r.json():{})}catch(e){SESSQ={}}
+  SESS=await pSESS;
+  SESSQ=await pSESSQ;
   META=m;ITEMS=it;SCIDX=sc||{};SCORES=[];ITEMS.forEach((i,n)=>{i.id=n;if(hd&&hd[n]!=null)i.dup=1;i.tags=[...new Set(i.tags.map(t=>TAGALIAS[t]||t))]});ITEMS_V=ITEMS.filter(i=>!i.dup);
-  try{const o=await fetch('orig.json').then(r=>r.json());ORIG=o.items;PIDX=o.pages;TPIDX=o.tpages||{}}catch(e){}
-  try{QNONE=await fetch('qnone.json').then(r=>r.ok?r.json():{})}catch(e){QNONE={}}
+  {const o=await pORIG;if(o&&o.items){ORIG=o.items;PIDX=o.pages||{};TPIDX=o.tpages||{}}}
+  QNONE=await pQNONE;
   if(store.get('hideHints')){$('#fh').checked=true;document.body.classList.add('hide-hints')}
   const df={};ITEMS.forEach(i=>i.tags.forEach(t=>df[t]=(df[t]||0)+1));
   META.rareSet=new Set(Object.keys(df).filter(t=>df[t]<30));
@@ -1637,29 +1639,36 @@ function onbPick(){const box=$('#onbBox');const sel=new Set(MYS().size?MYS():FAV
   setTimeout(()=>$('#onbQ').focus(),50)}
 function onbGuide(){const box=$('#onbBox');const mine=[...FAV.d.s].map(sName);
   box.innerHTML=`<h3 id="onbT">이렇게 쓰면 돼요</h3>${mine.length?`<p class="onb-mine">즐겨찾기: ${esc(mine.join(', '))}</p>`:''}
+  <h4 class="onb-sec">웹 이용법</h4>
   <ol class="onb-steps">
-   <li><span class="n">1</span><div><b>2027 대비 탭부터</b><p>학교와 계열(의예·약학·자연)을 고르면 올해 나올 유형·논리 예측과, 시험 전에 꼭 풀어야 할 기출이 1·2·3순위로 정리돼 있어요. 여기부터 확인하세요.</p></div></li>
-   <li><span class="n">2</span><div><b>문제 카드에서 필기</b><p>문제를 열고 「필기」를 누르면 문제 위에 바로 쓰기, 연습장, 답안지 중에서 골라 쓸 수 있어요.</p></div></li>
-   <li><span class="n">3</span><div><b>답안 쓰고 AI 채점 받기</b><p>웹 안의 답안지에 바로 쓰거나, 「종이 답안」에서 답안지 PDF를 받아 프린트하거나 패드에서 푼 뒤 사진·캡처를 올리면 돼요. AI가 그 학교의 채점 기준과 서술 주안점에 맞춰 채점해 줘요.</p></div></li>
-   <li><span class="n">4</span><div><b>풀고 나서 추가 학습</b><p>오른쪽 「추가 학습」에서 관련 기출을 이어 풀고, 개념·논리를 익혀요. 단순 개념 정리가 아니라, 이전 기출에서 쓰인 특이한 발상과 자주 나오는 정석 논리를 미리 익히도록 모아 둔 거예요.</p></div></li>
-   <li><span class="n">5</span><div><b>풀이 논리 · 행동강령</b><p>「필수 개념」 탭 맨 위 「풀이 논리」에는 모든 기출에 쓰인 논리를 묶어 「이 조건이 보이면 → 이렇게 한다」 행동강령으로 정리해 뒀어요. 문제 화면의 필수 논리 칩을 누르면 그 행동강령으로 바로 가요. 개념 글을 보다가 오른쪽 아래 「개념 질문」을 누르면 그 개념에 대해 AI에게 물어볼 수 있어요(인터넷 필요).</p></div></li>
-   <li><span class="n">6</span><div><b>앱처럼 쓰기 (홈 화면 바로가기 · 모든 기기)</b><p>설치 없이 홈 화면 아이콘으로 앱처럼 열려요. 자료가 올라오면 저절로 최신이 돼요.</p>
+   <li><span class="n">1</span><div><b>2027 대비부터</b><p>학교·계열(의예·약학·자연)을 고르면 예상 유형과 꼭 풀 기출(1·2·3순위)이 나와요.</p></div></li>
+   <li><span class="n">2</span><div><b>문제 풀기</b><p>「필기」로 문제 위·연습장·답안지에 바로 쓸 수 있어요. 노트나 종이에 풀어도 좋아요.</p></div></li>
+   <li><span class="n">3</span><div><b>AI 채점</b><p>웹 답안지에 쓰거나, 「종이 답안」 PDF에 풀고 사진을 올리면 학교 채점 기준으로 채점·첨삭해 줘요. <strong>「AI 채점」은 한 번만 누르고 기다리세요.</strong> 버튼이 「채점 중 ○초」로 바뀌고 보통 1~2분 걸려요.</p></div></li>
+   <li><span class="n">4</span><div><b>추가 학습</b><p>풀고 나면 「추가 학습」에서 관련 기출과 그 문제에 쓰인 발상·정석 논리를 이어서 봐요.</p></div></li>
+   <li><span class="n">5</span><div><b>풀이 논리 · 개념 질문</b><p>「필수 개념」 맨 위 행동강령은 「이 조건이면 → 이렇게」로 정리돼 있어요. 개념 글에서 「개념 질문」으로 AI에게 물을 수 있어요.</p></div></li>
+  </ol>
+  <h4 class="onb-sec">앱으로 쓰기</h4>
+  <ol class="onb-steps">
+   <li><span class="n">1</span><div><b>홈 화면 바로가기 (모든 기기)</b>
     <ul class="onb-sub">
-     <li><b>아이폰·아이패드</b> Safari로 이 사이트 열기 → 공유 버튼(네모에 위 화살표, 아이폰은 아래쪽·아이패드는 주소창 오른쪽) → 「홈 화면에 추가」 → 「추가」</li>
-     <li><b>안드로이드</b> Chrome으로 열기 → 오른쪽 위 ⋮ → 「홈 화면에 추가」 → 「설치」 (삼성 인터넷은 ≡ → 「현재 페이지 추가」 → 「홈 화면」)</li>
-     <li><b>컴퓨터</b> Chrome·Edge 주소창 오른쪽의 설치 아이콘(모니터에 ↓) → 「설치」</li>
-     <li><b>오프라인</b> 아이콘으로 연 뒤 맨 위 「오프라인 저장」을 한 번 누르면 모든 문제·그림·해설이 기기에 받아져 인터넷 없이도 열려요(AI 채점·개념 질문만 인터넷 필요). 다시 누르면 없거나 바뀐 파일만 받아요.</li>
+     <li><b>아이폰·아이패드</b>Safari 공유 → 「홈 화면에 추가」</li>
+     <li><b>안드로이드</b>Chrome ⋮ → 「홈 화면에 추가」 → 「설치」</li>
+     <li><b>컴퓨터</b>Chrome·Edge 주소창 오른쪽 설치 아이콘</li>
     </ul></div></li>
-   <li><span class="n">7</span><div><b>안드로이드 앱 (APK 설치)</b><p>안드로이드 폰·태블릿에 진짜 앱으로 설치하는 방법이에요. 답안지 PDF가 바로 「다운로드」 폴더에 저장되고, 답안 사진도 갤러리에서 바로 골라요.</p>
+   <li><span class="n">2</span><div><b>안드로이드 앱 (APK)</b>
     <ol class="onb-sub">
-     <li><a href="app/nonsul.apk" download>앱 파일(APK) 받기</a> → Chrome이 「유해할 수 있는 파일」이라고 하면 「그래도 다운로드」</li>
-     <li>알림창이나 「내 파일 → 다운로드」에서 nonsul.apk 누르기</li>
-     <li>「출처를 알 수 없는 앱」 안내가 나오면 「설정」 → 「이 출처 허용」 켜고 뒤로 → 「설치」</li>
-     <li>삼성 폰에서 막히면: 설정 → 보안 및 개인정보 보호 → 「자동 차단」을 잠시 끄고 설치한 뒤 다시 켜기</li>
-     <li>「Play 프로텍트」 경고가 나오면 「세부정보」 → 「무시하고 설치」</li>
-     <li>앱 열기 → 비밀번호 입력 → 와이파이에서 「오프라인 저장」 한 번</li>
+     <li><a href="app/nonsul.apk" download>APK 받기</a> → 경고가 나와도 「그래도 다운로드」</li>
+     <li>「내 파일 → 다운로드」에서 열기 → 「이 출처 허용」 → 「설치」</li>
+     <li>막히면: 삼성 「자동 차단」 잠시 끄기, Play 프로텍트는 「무시하고 설치」</li>
     </ol>
-    <p>앱은 이 사이트를 그대로 여는 방식이라 새 기능·자료는 다시 설치하지 않아도 적용돼요. 아이폰은 APK를 쓸 수 없으니 6번 방법을 쓰세요.</p></div></li>
+    <p>새 기능은 다시 설치 없이 적용돼요. 아이폰은 1번을 쓰세요.</p></div></li>
+   <li><span class="n">3</span><div><b>오프라인 저장</b>
+    <ul class="onb-sub">
+     <li><b>하는 일</b>모든 문제·그림·해설·문서를 기기에 받아 둬요(약 160MB, 와이파이 권장).</li>
+     <li><b>그 뒤</b>인터넷 없이도 다 열려요. AI 채점·개념 질문만 인터넷이 필요해요.</li>
+     <li><b>업데이트</b>다시 누르면 없거나 바뀐 파일만 받아요. 다 받으면 버튼이 「오프라인 준비됨」으로 바뀌어요.</li>
+     <li><b>주의</b>받는 동안 화면을 켜 두세요. 앱·브라우저 데이터를 지우면 다시 받아야 해요.</li>
+    </ul></div></li>
   </ol>
   <div class="onb-foot"><button type="button" class="btn" id="onbPick2">학교 다시 고르기</button><button type="button" class="btn primary" id="onbGo">2027 대비로 가기</button></div>`;
   $('#onbPick2').onclick=()=>{onbPick()};$('#onbGo').onclick=()=>{onbClose();location.hash='prep'};setTimeout(()=>$('#onbGo').focus(),50)}
