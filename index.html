@@ -1882,7 +1882,7 @@ function inlineMjxUse(root){const NS='http://www.w3.org/2000/svg';
     const g=document.createElementNS(NS,'g');let tr=u.getAttribute('transform')||'';const x=+u.getAttribute('x')||0,y=+u.getAttribute('y')||0;if(x||y)tr+=` translate(${x},${y})`;if(tr.trim())g.setAttribute('transform',tr.trim());
     const c=t.cloneNode(true);c.removeAttribute('id');g.appendChild(c);u.replaceWith(g)})}
 let PDF_FILE=null;
-async function pdfFile(name,btn,lab){
+async function pdfFile(name,btn,lab,ids){
   const area=$('#printArea');area.classList.add('pa-screen');const items=[...area.querySelectorAll('.pa-item')];
   const setB=t=>{if(btn){btn.disabled=!!t;btn.textContent=t||lab}};
   try{
@@ -1920,7 +1920,10 @@ async function pdfFile(name,btn,lab){
     }
     }finally{fr.remove()}
     const jpgs=[];for(const c of pages){const b=await new Promise(r=>c.toBlob(r,'image/jpeg',0.86));jpgs.push({w:c.width,h:c.height,d:new Uint8Array(await b.arrayBuffer())})}
-    PDF_FILE={blob:window.NSMJpgPdf(jpgs),name:name.replace(/[\\/:*?"<>|]/g,' ')+'.pdf',pages:jpgs.length};
+    // 한글 파일 이름은 일부 브라우저가 'download'로 바꿔서, 앱 밖에서는 영문 이름으로 받는다
+    const dt=new Date(),ymd=`${dt.getFullYear()}${String(dt.getMonth()+1).padStart(2,'0')}${String(dt.getDate()).padStart(2,'0')}`;
+    const ascii=(ids&&ids.length===1?`nonsul-q${ids[0]}`:`nonsul-${(ids||[]).length}q`)+`-${ymd}.pdf`;
+    PDF_FILE={blob:window.NSMJpgPdf(jpgs),name:name.replace(/[\\/:*?"<>|]/g,' ')+'.pdf',file:window.NSMAndroid?name.replace(/[\\/:*?"<>|]/g,' ')+'.pdf':ascii,pages:jpgs.length};
     pdfReady();
   }catch(e){alert(e&&e.message==='lib'?'PDF 도구를 불러오지 못했어요. 인터넷 연결을 확인하거나, 「오프라인 저장」을 한 번 해 두면 인터넷 없이도 돼요.':'PDF를 만들지 못했어요. 다시 눌러 주세요.')}
   finally{area.classList.remove('pa-screen');setB('')}
@@ -1929,7 +1932,7 @@ async function pdfFile(name,btn,lab){
 function pdfReady(){if(!PDF_FILE)return;$('#pdfp').hidden=false;
   $('#pdfBox').innerHTML=`<h3 id="pdfT">PDF를 만들었어요</h3><p class="sub">${esc(PDF_FILE.name)} · ${PDF_FILE.pages}쪽</p>
   <div class="onb-foot"><button type="button" class="btn" id="pdfX2">닫기</button><button type="button" class="btn primary" id="pdfGet">PDF 받기</button></div>`;
-  $('#pdfX2').onclick=pdfClose;$('#pdfGet').onclick=async()=>{const r=await window.NSMSaveBlob(PDF_FILE.blob,PDF_FILE.name);if(r==='ok')pdfClose()};setTimeout(()=>$('#pdfGet').focus(),50)}
+  $('#pdfX2').onclick=pdfClose;$('#pdfGet').onclick=async()=>{const r=await window.NSMSaveBlob(PDF_FILE.blob,PDF_FILE.file);if(r==='ok')pdfClose()};setTimeout(()=>$('#pdfGet').focus(),50)}
 // 문항을 인쇄용 영역에 그린 뒤 브라우저 인쇄(→ PDF로 저장). 안드로이드 앱은 앱의 인쇄 기능을 쓴다
 let PDF_RUN=false;
 async function pdfMake(ids,opt,btn){
@@ -1952,7 +1955,7 @@ async function pdfMake(ids,opt,btn){
     area.querySelectorAll('img.figimg').forEach(im=>{if(im.naturalWidth&&!im.style.width)im.style.width=Math.round(im.naturalWidth*0.6)+'px'});
   }finally{showOrig=so;PDF_RUN=false;if(btn)btn.textContent=lab}
   const name=ids.length===1?pdfTitle(ITEMS[ids[0]]):`논술 기출 ${ids.length}문항`;
-  if(!opt.print){await pdfFile(name,btn,lab);return}
+  if(!opt.print){await pdfFile(name,btn,lab,ids);return}
   const t0=document.title;document.title=name;
   if(window.NSMAndroid&&typeof NSMAndroid.print==='function'){try{NSMAndroid.print(name)}catch(e){}setTimeout(()=>{document.title=t0},4000)}
   else if(window.NSMAndroid){document.title=t0;alert('이 앱 버전은 인쇄 창을 열 수 없어요. 「PDF 파일 만들기」를 쓰면 다운로드 폴더에 바로 저장돼요.')}
