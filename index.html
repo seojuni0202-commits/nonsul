@@ -601,6 +601,12 @@ html{touch-action:manipulation;-webkit-text-size-adjust:100%}
 .pdf-opts label{display:flex;gap:6px;align-items:center}
 @media (max-width:480px){#solve .bar .row{gap:4px}#solve .bar .row .btn{padding:6px 8px;font-size:.84rem;min-width:0}}
 #printArea{display:none}
+.pq-bar{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 -4px}
+.pq-bar .btn{font-size:.84rem;padding:6px 12px}
+.pq-bar [aria-pressed="true"]{color:#b45309;border-color:#f59e0b;background:#fffbeb}
+.doc ol.pq .qpick{margin-left:6px;font-size:.72rem;padding:2px 7px;vertical-align:1px}
+#pdfToast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);background:#111827;color:#fff;padding:10px 16px;border-radius:10px;font-size:.9rem;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:70;max-width:calc(100vw - 32px)}
+#pdfToast.on{opacity:1;transform:translate(-50%,0)}
 @media print{
   @page{size:A4;margin:14mm 13mm}
   body>*:not(#printArea){display:none!important}
@@ -1228,7 +1234,14 @@ function compactPrep(el){
       const ln=il>=0&&td[il]?td[il].innerHTML.trim():'';const lm=ln.match(/^(유형\s*[\d·,\s]+|기초)\s*·\s*/);
       const li=document.createElement('li');li.innerHTML=`<span class="pq-n">${k+1}</span><div class="pq-b"><div class="pq-t"></div>${w?`<div class="pq-w">${w}</div>`:''}${g.length?`<div class="pq-g">${g.map(x=>`<span>${x}</span>`).join('')}</div>`:''}</div>${ln?`<div class="pq-l">${lm?`<b>${lm[1].trim()}</b>`:''}${lm?ln.slice(lm[0].length):ln}</div>`:''}`;
       li.querySelector('.pq-t').appendChild(a);ol.appendChild(li)});
-    if(ol.children.length)tb.replaceWith(ol)});
+    if(ol.children.length){tb.replaceWith(ol);
+      // 순위 목록 한 번에 담기: 바로 앞 제목에서 「n순위」를 찾아 버튼 이름으로
+      const ids=[...ol.querySelectorAll('a[href^="#q-"]')].map(a=>+a.getAttribute('href').slice(3)).filter(x=>!isNaN(x));
+      // 바로 앞 제목(형제 → 부모 쪽으로 올라가며, 접는 칸 summary 안 제목 포함)에서 「n순위」를 찾는다
+      let lab=null;for(let n=ol;n&&n!==el.parentElement&&!lab;n=n.parentElement){for(let h=n.previousElementSibling;h&&!lab;h=h.previousElementSibling){const hs=/^H[1-4]$/.test(h.tagName)?[h]:[...(h.querySelectorAll?h.querySelectorAll('h1,h2,h3,h4'):[])].reverse();for(const x of hs){const m=x.textContent.match(/\d순위/);if(m){lab=m[0];break}}if(hs.length)break}}
+      const bar=document.createElement('div');bar.className='pq-bar';bar.innerHTML=`<button type="button" class="btn" data-pqall="${ids.join(',')}" data-lab="${lab||'이 목록'}"></button><button type="button" class="btn" data-pqpdf="${ids.join(',')}">${lab||'이 목록'} 바로 PDF</button>`;
+      ol.before(bar);ol.querySelectorAll('li').forEach((li,k)=>{li.querySelector('.pq-t').insertAdjacentHTML('beforeend',' '+pickBtn(ids[k]))});
+      if(typeof pdfSync==='function')pdfSync()}});
 }
 // 카드 이름: 같은 학교·학년도·구분·번호 카드가 여럿이면(회차·오전/오후·일반형/창의형) 시험 구분을 괄호로 붙인다
 let TDUP=null;
@@ -1813,13 +1826,20 @@ function onbMaybe(){let seen=null;try{seen=localStorage.getItem('nsm:onb')}catch
 const PDFQ={get(){try{const a=JSON.parse(localStorage.getItem('nsm:pdfq')||'[]');return Array.isArray(a)?a.filter(x=>ITEMS&&ITEMS[x]):[]}catch(e){return []}},
   set(a){try{localStorage.setItem('nsm:pdfq',JSON.stringify(a))}catch(e){}pdfSync()},
   has(id){return this.get().includes(id)},
-  toggle(id){const a=this.get();const k=a.indexOf(id);if(k<0)a.push(id);else a.splice(k,1);this.set(a);return k<0}};
+  toggle(id){const a=this.get();const k=a.indexOf(id);if(k<0)a.push(id);else a.splice(k,1);this.set(a);return k<0},
+  addMany(ids){const a=this.get();let n=0;for(const x of ids)if(!a.includes(x)){a.push(x);n++}this.set(a);return n},
+  removeMany(ids){this.set(this.get().filter(x=>!ids.includes(x)))}};
 function pickBtn(id){const on=PDFQ.has(id);return `<button type="button" class="qpick" data-qpick="${id}" aria-pressed="${on}" title="PDF로 합칠 목록에 담기">${on?'★ 담음':'☆ 담기'}</button>`}
 function pdfTitle(i){return `${disp(i.s)} ${i.y} ${kDisp(i)} · ${gDisp(i)} · ${qDisp(i.q)}`}
 function pdfSync(){const n=PDFQ.get().length;const e=$('#pdfN');if(e)e.textContent=n?` (${n})`:'';
   document.querySelectorAll('[data-qpick]').forEach(b=>{const on=PDFQ.has(+b.dataset.qpick);b.setAttribute('aria-pressed',on);b.textContent=on?'★ 담음':'☆ 담기'});
+  {const q=PDFQ.get();document.querySelectorAll('[data-pqall]').forEach(b=>{const ids=b.dataset.pqall.split(',').map(Number);const all=ids.length&&ids.every(x=>q.includes(x));b.setAttribute('aria-pressed',all);b.textContent=all?`★ ${b.dataset.lab} ${ids.length}문항 담음 (빼기)`:`☆ ${b.dataset.lab} ${ids.length}문항 모두 담기`})}
   if(typeof svCur!=='undefined'&&svCur){const on=PDFQ.has(svCur.id);$('#svPick').setAttribute('aria-pressed',on);$('#svPick').textContent=on?'★ 담음':'☆ 담기'}}
 // 카드 안 담기 버튼: 카드 열기보다 먼저 받는다
+document.addEventListener('click',e=>{const b=e.target.closest('[data-pqall],[data-pqpdf]');if(!b)return;e.preventDefault();
+  if(b.dataset.pqpdf){pdfMake(b.dataset.pqpdf.split(',').map(Number),{ans:pdfOpt('ans'),pb:pdfOpt('pb')},b);return}
+  const ids=b.dataset.pqall.split(',').map(Number);if(b.getAttribute('aria-pressed')==='true')PDFQ.removeMany(ids);else{const n=PDFQ.addMany(ids);pdfToast(n?`${n}문항을 담았어요. 맨 위 「문항 PDF」에서 합쳐 저장하세요.`:'이미 모두 담겨 있어요.')}});
+function pdfToast(t){let el=document.getElementById('pdfToast');if(!el){el=document.createElement('div');el.id='pdfToast';el.setAttribute('role','status');document.body.appendChild(el)}el.textContent=t;el.classList.add('on');clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('on'),2600)}
 document.addEventListener('click',e=>{const b=e.target.closest('[data-qpick]');if(!b)return;e.preventDefault();e.stopPropagation();PDFQ.toggle(+b.dataset.qpick)},true);
 $('#svPick').onclick=()=>{if(svCur)PDFQ.toggle(svCur.id)};
 $('#svPdf').onclick=()=>{if(svCur)pdfMake([svCur.id],{ans:pdfOpt('ans'),pb:true},$('#svPdf'))};
