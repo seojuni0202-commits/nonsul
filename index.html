@@ -856,7 +856,7 @@ async function hydrateFigs(root){
   if(!FIGS){try{FIGS=await fetch('figs.json').then(r=>r.ok?r.json():{})}catch(e){FIGS={}}}
   for(const im of list){im.dataset.on='1';const k=im.dataset.fig,c=FIGS[k];if(!c){im.closest('.figp')?.remove();continue}
     getFPack(c).then(pk=>{if(!pk[k]){im.closest('.figp')?.remove();return}
-      im.onload=()=>{im.style.width=Math.round(im.naturalWidth*0.6)+'px'};im.src='data:image/webp;base64,'+pk[k]})}
+      im.onload=()=>{im.style.width=Math.round(im.naturalWidth*0.6)+'px'};im.src='data:image/'+(/^(PHN2|PD94)/.test(pk[k])?'svg+xml':'webp')+';base64,'+pk[k]})}
 }
 new MutationObserver(()=>{clearTimeout(hydrateFigs.t);hydrateFigs.t=setTimeout(()=>hydrateFigs(),60)}).observe(document.documentElement,{childList:true,subtree:true});
 function getPack(c){if(!packs[c])packs[c]=fetch('img/'+c+'.json').then(r=>r.ok?r.json():{}).catch(()=>({}));return packs[c]}
@@ -1857,7 +1857,7 @@ function pdfOptSet(k,v){try{localStorage.setItem('nsm:pdf:'+k,v?'1':'0')}catch(e
 function pdfPanel(){const box=$('#pdfBox');const a=PDFQ.get();
   box.innerHTML=`<h3 id="pdfT">문항 PDF</h3><p class="sub">담은 문항을 순서대로 한 PDF로 합쳐요. 문제 화면이나 카드의 「☆ 담기」로 담아요.</p>
   ${a.length?`<ol class="pdf-list">${a.map((id,k)=>{const i=ITEMS[id];return `<li><span class="no">${k+1}</span><span class="t">${esc(disp(i.s))} ${esc(i.y)} ${esc(kDisp(i))} · ${esc(qDisp(i.q))}<small>${esc(gDisp(i))} · ${esc(i.subj||'')}</small></span><button type="button" data-mv="${k}" data-d="-1" aria-label="위로" ${k?'':'disabled'}>↑</button><button type="button" data-mv="${k}" data-d="1" aria-label="아래로" ${k<a.length-1?'':'disabled'}>↓</button><button type="button" data-rm="${id}" aria-label="빼기">✕</button></li>`}).join('')}</ol>`:'<div class="empty" style="margin:10px 0">아직 담은 문항이 없어요.</div>'}
-  <div class="pdf-opts"><label><input type="checkbox" id="pdfAns" ${pdfOpt('ans')?'checked':''}>예시답안·해설 포함</label><label><input type="checkbox" id="pdfPb" ${pdfOpt('pb')?'checked':''}>문항마다 새 쪽에서 시작</label></div>
+  <div class="pdf-opts"><label><input type="checkbox" id="pdfAns" ${pdfOpt('ans')?'checked':''}>예시답안·해설 포함</label><label><input type="checkbox" id="pdfPb" ${pdfOpt('pb')?'checked':''}>한 쪽에 한 문항(길면 줄여 맞춤)</label></div>
   <div class="onb-foot"><button type="button" class="btn" id="pdfClr" ${a.length?'':'disabled'}>모두 빼기</button><button type="button" class="btn" id="pdfX">닫기</button><button type="button" class="btn" id="pdfPrint" ${a.length?'':'disabled'} title="글자가 더 선명해요(컴퓨터 권장)">인쇄 창으로</button><button type="button" class="btn primary" id="pdfGo" ${a.length?'':'disabled'}>PDF 파일 만들기 (${a.length}문항)</button></div>`;
   $('#pdfAns').onchange=e=>pdfOptSet('ans',e.target.checked);$('#pdfPb').onchange=e=>pdfOptSet('pb',e.target.checked);
   box.querySelectorAll('[data-mv]').forEach(b=>b.onclick=()=>{const a=PDFQ.get(),k=+b.dataset.mv,d=+b.dataset.d;[a[k],a[k+d]]=[a[k+d],a[k]];PDFQ.set(a);pdfPanel()});
@@ -1910,7 +1910,13 @@ async function pdfFile(name,btn,lab,ids){
       const sc=Math.min(OS,Math.sqrt(12e6/(w*h)));
       const cv=await html2canvas(el,{scale:sc,backgroundColor:'#ffffff',logging:false,useCORS:true,windowWidth:CW});
       const k=cv.width/w;  // 그림 px / CSS px
-      if(!pc||(el.classList.contains('pb')&&cy>0))newPage();
+      const fit=area.dataset.fit==='1'&&!el.classList.contains('pa-cover');
+      if(fit){
+        if(!pc||(cy>0&&!(n===1&&cover)))newPage();
+        const full=h*(CW/w),s0=Math.min(1,(CH-cy)/full);
+        if(s0>=0.55){const dw=CW*s0,dh=full*s0;px.drawImage(cv,0,0,cv.width,cv.height,(M+(CW-dw)/2)*OS,(M+cy)*OS,dw*OS,dh*OS);cy+=dh+14;continue}
+        if(cy>0)newPage();
+      }else if(!pc||(el.classList.contains('pb')&&cy>0))newPage();
       let y=0;
       while(y<h-1){let room=CH-cy;if(room<60){newPage();room=CH}
         let end=Math.min(h,y+room);
@@ -1946,7 +1952,9 @@ async function pdfMake(ids,opt,btn){
       const o=ORIG[i.id]||{q:[],a:[]};const box=document.createElement('div');box.className='pages';sec.appendChild(box);
       if(QNONE[i.id]||!o.q.length){box.innerHTML=`<div class="typed"><p><b>문제 원문 없음</b> — 문항 요약: ${texInline(i.idea||'')}</p></div>`;if(window.MathJax&&MathJax.typesetPromise)await MathJax.typesetPromise([box]).catch(()=>{})}
       else await showKeys(o.q,box);
-      if(opt.ans&&o.a&&o.a.length){sec.insertAdjacentHTML('beforeend','<h3 class="pa-ans">예시답안·해설</h3>');const b2=document.createElement('div');b2.className='pages';sec.appendChild(b2);await showKeys(o.a,b2)}}
+      if(opt.ans&&o.a&&o.a.length){const s2=opt.pb?document.createElement('section'):sec;if(opt.pb){s2.className='pa-item pa-a pb';area.appendChild(s2)}
+        s2.insertAdjacentHTML('beforeend',`<h3 class="pa-ans">${opt.pb&&ids.length>1?(n+1)+'. ':''}예시답안·해설</h3>`);const b2=document.createElement('div');b2.className='pages';s2.appendChild(b2);await showKeys(o.a,b2)}}
+    area.dataset.fit=opt.pb?'1':'';
     // 그림(figimg)은 나중에 채워지므로 다 채워질 때까지 기다린다(최대 10초)
     area.querySelectorAll('img').forEach(im=>{im.loading='eager'});  // 늦게 읽기(lazy) 그림은 숨긴 영역에서 안 읽힌다
     try{await hydrateFigs(area)}catch(e){}
