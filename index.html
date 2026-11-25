@@ -888,7 +888,7 @@ async function hydrateFigs(root){
   if(!FIGS){try{FIGS=await fetch('figs.json').then(r=>r.ok?r.json():{})}catch(e){FIGS={}}}
   for(const im of list){im.dataset.on='1';const k=im.dataset.fig,c=FIGS[k];if(!c){im.closest('.figp')?.remove();continue}
     getFPack(c).then(pk=>{if(!pk[k]){im.closest('.figp')?.remove();return}
-      im.onload=()=>{im.style.width=Math.round(im.naturalWidth*0.6)+'px'};im.src='data:image/'+(/^(PHN2|PD94)/.test(pk[k])?'svg+xml':'webp')+';base64,'+pk[k]})}
+      im.onload=()=>{im.style.width=Math.round(im.naturalWidth*0.6)+'px'};const v=pk[k];im.src=v.startsWith('<')?'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(v):'data:image/'+(/^(PHN2|PD94)/.test(v)?'svg+xml':'webp')+';base64,'+v})}
 }
 new MutationObserver(()=>{clearTimeout(hydrateFigs.t);hydrateFigs.t=setTimeout(()=>hydrateFigs(),60)}).observe(document.documentElement,{childList:true,subtree:true});
 function getPack(c){if(!packs[c])packs[c]=fetch('img/'+c+'.json').then(r=>r.ok?r.json():{}).catch(()=>({}));return packs[c]}
