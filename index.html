@@ -653,6 +653,32 @@ html{touch-action:manipulation;-webkit-text-size-adjust:100%}
 .doc li,.cdoc li{min-width:0}
 /* 화면 낭독용 수식 사본(보이지 않음)이 쪽 너비를 넓히지 않게 */
 mjx-assistive-mml{max-width:100%!important;right:0}
+.pq-sub{display:inline-block;margin-left:4px;padding:1px 7px;border-radius:9px;background:#eef4ff;color:#1d4ed8;font-size:.78em;font-weight:600;white-space:nowrap;vertical-align:1px}
+.pq-sub.all{background:#f3f4f6;color:#374151}
+.pq-sn{color:#1d4ed8}
+.pa-sub{font-size:.8em;font-weight:500;color:#555}
+#gtRoot{max-width:820px}
+.gt-lede{color:#4b5563;margin:4px 0 14px}
+.gt-step{border:1px solid #e5e7eb;border-radius:12px;padding:12px 14px;margin:0 0 12px;background:#fff}
+.gt-step>b{font-size:1rem}
+.gt-row{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+.gt-row select,#gtTitle{min-height:40px;padding:6px 10px;border:1px solid #cbd5e1;border-radius:8px;font:inherit;background:#fff;max-width:100%}
+#gtTitle{width:100%;box-sizing:border-box}
+.gt-hint{margin:4px 0 8px;color:#6b7280;font-size:.9rem;line-height:1.5}
+.gt-n{color:#1d4ed8;font-weight:600;font-size:.9rem}
+.gt-up{display:inline-flex;align-items:center;margin:0 6px 6px 0;cursor:pointer}
+.gt-ths{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.gt-th{position:relative;width:84px;height:110px;border:1px solid #d1d5db;border-radius:8px;overflow:hidden;background:#f9fafb}
+.gt-th img{width:100%;height:100%;object-fit:cover}
+.gt-th button{position:absolute;top:2px;right:2px;width:28px;height:28px;border:0;border-radius:14px;background:rgba(0,0,0,.6);color:#fff;font-size:14px;cursor:pointer}
+.gt-th b{position:absolute;left:4px;bottom:2px;background:rgba(255,255,255,.85);border-radius:6px;padding:0 5px;font-size:.8rem}
+.gt-go{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 12px}
+#gtGo{min-width:150px}
+#gtRes .gt-grade{border:1px solid #e5e7eb;border-radius:12px;padding:12px 14px;margin:12px 0;background:#fff}
+.gt-h{margin:16px 0 6px}
+.gt-hl{list-style:none;padding:0;margin:0}
+.gt-hl button{width:100%;text-align:left;min-height:40px;padding:6px 10px;margin:0 0 6px;border:1px solid #e5e7eb;border-radius:8px;background:#fff;font:inherit;cursor:pointer}
+.gt-hl button b{float:right;color:#1d4ed8}
 </style>
 
 <header class="top"><div class="wrap">
@@ -662,6 +688,7 @@ mjx-assistive-mml{max-width:100%!important;right:0}
 <nav class="tabs" aria-label="보기"><div class="wrap">
   <a href="#items" data-v="items">기출 검색</a>
   <a href="#prep" data-v="prep">2027 대비</a>
+  <a href="#grade" data-v="grade">채점</a>
   <a href="#schools" data-v="schools">학교별 분석</a>
   <a href="#concepts" data-v="concepts">필수 개념</a>
   <a href="#graph" data-v="graph">학교 간 연관</a>
@@ -765,6 +792,11 @@ mjx-assistive-mml{max-width:100%!important;right:0}
   <div class="igrid" id="pgrid"></div>
   <p id="pback" hidden><button type="button" class="btn" id="pbackBtn">← 학교 목록</button></p>
   <div id="pbody"></div>
+</section>
+
+<section id="v-grade" hidden>
+  <h2>실전 모의고사 채점</h2>
+  <div id="gtRoot"><p class="note">불러오는 중…</p></div>
 </section>
 
 <section id="v-overview" hidden>
@@ -1195,7 +1227,14 @@ function enhanceConcept(el){
   show(cat,true);
 }
 // 2027 대비 탭
-let PIDX2=null;
+let PIDX2=null,SUBQ=null,PICKS=null;
+async function loadSubq(){if(!SUBQ){try{[SUBQ,PICKS]=await Promise.all(['prep/subq.json','prep/picks.json'].map(f=>fetch(f).then(r=>r.ok?r.json():{})))}catch(e){SUBQ={};PICKS={}}}}
+// 소문항 고르기: 글을 공통 부분(첫 소문항 앞) + 고른 소문항들로 줄인다. 시작 글을 못 찾으면 원래 글 그대로
+function subSlice(t,subs,pick){if(!subs||!subs.length||!Array.isArray(pick)||!pick.length)return {t,ok:false};
+  let last=-1;const pos=[];for(const [l,a] of subs){const k=t.indexOf(a,last+1);if(k<0)return {t,ok:false};pos.push(k);last=k}
+  const segs=subs.map(([l],i)=>[l,t.slice(pos[i],i+1<pos.length?pos[i+1]:t.length)]);
+  return {t:t.slice(0,pos[0])+segs.filter(([l])=>pick.includes(l)).map(x=>x[1]).join(''),ok:true}}
+const subLab=p=>!p||p==='all'?'전체':(p.length===1?p[0]+'만':p.join('·'));
 async function openPrep(id){
   if(!PIDX2){try{PIDX2=await fetch('prep/index.json').then(r=>r.json())}catch(e){PIDX2=[]}}
   const grid=$('#pgrid'),el=$('#pbody'),back=$('#pback');
@@ -1210,7 +1249,7 @@ async function openPrep(id){
   el.innerHTML=(tk&&TR.length>1?prepSeg(sc,tk.k):'')+'<div class="doc"><p class="note">불러오는 중…</p></div>';
   if(tk)try{localStorage.setItem('ptrk:'+sc.id,tk.k)}catch(e){}
   let t='';try{const r=await fetch('prep/'+file+'.md');t=r.ok?await r.text():''}catch(e){}
-  el.querySelector('.doc').innerHTML=md(t);compactPrep(el);typeset(el);markPrep(el);window.scrollTo(0,0);
+  await loadSubq();el.querySelector('.doc').innerHTML=md(t);compactPrep(el,file);typeset(el);markPrep(el);window.scrollTo(0,0);
 }
 const PTRK={med:'의예',phar:'약학',nat:'자연'};
 function prepProg(ids){ids=ids||[];const done=ids.filter(q=>rec.get(q).st==='done').length;return {done,n:ids.length,pct:ids.length?Math.round(done/ids.length*100):0}}
@@ -1233,7 +1272,7 @@ function renderPrepGrid(){
 $('#pq').addEventListener('input',()=>renderPrepGrid());
 $('#pq').addEventListener('keydown',e=>{if(e.key==='Enter'){const b=$('#pgrid .scard');if(b)b.click()}});
 // 순위 표(순서·기출·왜·유형)를 한 줄짜리 목록으로: 카드 이름 / 이유 + 유형 칩
-function compactPrep(el){
+function compactPrep(el,doc){const PK=(PICKS&&doc&&PICKS[doc])||{};
   el.querySelectorAll('table').forEach(tb=>{const hs=[...tb.querySelectorAll('thead th')].map(x=>x.textContent.trim());
     const iq=hs.indexOf('기출');if(iq<0)return;const iw=hs.findIndex(h=>/왜/.test(h)),ig=hs.findIndex(h=>/유형/.test(h)),il=hs.findIndex(h=>/배울/.test(h));
     const ol=document.createElement('ol');ol.className='pq';
@@ -1242,14 +1281,18 @@ function compactPrep(el){
       const w=iw>=0&&td[iw]?td[iw].innerHTML.trim():'';const g=ig>=0&&td[ig]?td[ig].innerHTML.split(/\s+·\s+/).map(x=>x.trim()).filter(Boolean):[];
       const ln=il>=0&&td[il]?td[il].innerHTML.trim():'';const lm=ln.match(/^(유형\s*[\d·,\s]+|기초)\s*·\s*/);
       const li=document.createElement('li');li.innerHTML=`<span class="pq-n">${k+1}</span><div class="pq-b"><div class="pq-t"></div>${w?`<div class="pq-w">${w}</div>`:''}${g.length?`<div class="pq-g">${g.map(x=>`<span>${x}</span>`).join('')}</div>`:''}</div>${ln?`<div class="pq-l">${lm?`<b>${lm[1].trim()}</b>`:''}${lm?ln.slice(lm[0].length):ln}</div>`:''}`;
-      li.querySelector('.pq-t').appendChild(a);ol.appendChild(li)});
+      li.querySelector('.pq-t').appendChild(a);
+      {const pk=PK[id];if(pk){const multi=SUBQ&&SUBQ[id]&&SUBQ[id].length;const lab=pk.p==='all'?(multi?'전체 풀기':'한 문항 전체'):subLab(pk.p)+' 풀기';
+        a.insertAdjacentHTML('afterend',` <span class="pq-sub${pk.p==='all'?' all':''}">${esc(lab)}</span>`);
+        if(pk.n&&multi){const wd=li.querySelector('.pq-w');const tx=`<span class="pq-sn">${esc(pk.n)}</span>`;if(wd)wd.insertAdjacentHTML('beforeend',' · '+tx);else li.querySelector('.pq-b').insertAdjacentHTML('beforeend',`<div class="pq-w">${tx}</div>`)}}}
+      ol.appendChild(li)});
     if(ol.children.length){tb.replaceWith(ol);
       // 순위 목록 한 번에 담기: 바로 앞 제목에서 「n순위」를 찾아 버튼 이름으로
       const ids=[...ol.querySelectorAll('a[href^="#q-"]')].map(a=>+a.getAttribute('href').slice(3)).filter(x=>!isNaN(x));
       // 바로 앞 제목(형제 → 부모 쪽으로 올라가며, 접는 칸 summary 안 제목 포함)에서 「n순위」를 찾는다
       let lab=null;for(let n=ol;n&&n!==el.parentElement&&!lab;n=n.parentElement){for(let h=n.previousElementSibling;h&&!lab;h=h.previousElementSibling){const hs=/^H[1-4]$/.test(h.tagName)?[h]:[...(h.querySelectorAll?h.querySelectorAll('h1,h2,h3,h4'):[])].reverse();for(const x of hs){const m=x.textContent.match(/\d순위/);if(m){lab=m[0];break}}if(hs.length)break}}
-      const bar=document.createElement('div');bar.className='pq-bar';bar.innerHTML=`<button type="button" class="btn" data-pqall="${ids.join(',')}" data-lab="${lab||'이 목록'}"></button><button type="button" class="btn" data-pqpdf="${ids.join(',')}">${lab||'이 목록'} 바로 PDF</button>`;
-      ol.before(bar);ol.querySelectorAll('li').forEach((li,k)=>{li.querySelector('.pq-t').insertAdjacentHTML('beforeend',' '+pickBtn(ids[k]))});
+      const bar=document.createElement('div');bar.className='pq-bar';bar.innerHTML=`<button type="button" class="btn" data-pqall="${ids.join(',')}" data-doc="${doc||''}" data-lab="${lab||'이 목록'}"></button><button type="button" class="btn" data-pqpdf="${ids.join(',')}" data-doc="${doc||''}">${lab||'이 목록'} 바로 PDF</button>`;
+      ol.before(bar);ol.querySelectorAll('li').forEach((li,k)=>{li.querySelector('.pq-t').insertAdjacentHTML('beforeend',' '+pickBtn(ids[k],doc))});
       if(typeof pdfSync==='function')pdfSync()}});
 }
 // 카드 이름: 같은 학교·학년도·구분·번호 카드가 여럿이면(회차·오전/오후·일반형/창의형) 시험 구분을 괄호로 붙인다
@@ -1489,7 +1532,8 @@ async function showKeys(keys,box,opt={}){
     if(!g.t){const w=document.createElement('div');w.className='pages';w.style.width='100%';box.appendChild(w);await pageImgs(g.k,w,true);continue}
     const parts=[];for(const k of g.k){const pk=await getTPack(TPIDX[k]);const tx=(pk[k]||'').trim();if(tx)parts.push(tx)}
     if(!parts.length)continue;
-    const d=document.createElement('div');d.className='typed';d.innerHTML=mdMath(parts.join('\n\n'));
+    let tx0=parts.join('\n\n');if(opt.slice){const r=subSlice(tx0,opt.slice.subs,opt.slice.pick);tx0=r.t;opt.slice.ok=r.ok}
+    const d=document.createElement('div');d.className='typed';d.innerHTML=mdMath(tx0);
     if(first&&opt.pull)svIntent=pullIntent(d);
     if(first&&opt.pre)d.insertAdjacentHTML('afterbegin',preHTML());
     first=false;box.appendChild(d)}
@@ -1608,7 +1652,7 @@ document.addEventListener('keydown',e=>{if($('#solve').hidden)return;if(e.key===
 let overviewDone=false;
 function route(){
   const h=location.hash.slice(1)||'items';
-  const v=h.startsWith('s-')?'school':h.startsWith('c-')?'concepts':h.startsWith('prep')?'prep':h.startsWith('i-')?'items':(['items','schools','concepts','graph','scores','overview'].includes(h)?h:'items');
+  const v=h.startsWith('s-')?'school':h.startsWith('c-')?'concepts':h.startsWith('prep')?'prep':h.startsWith('i-')?'items':(['items','schools','concepts','graph','scores','overview','grade'].includes(h)?h:'items');
   $$('main section').forEach(s=>s.hidden=s.id!=='v-'+v);
   if(v!=='concepts'){const f=document.getElementById('askFab'),pn=document.getElementById('askPanel');if(f)f.hidden=true;if(pn)pn.hidden=true}else if(typeof ASK!=='undefined'&&ASK.id&&document.getElementById('askPanel').hidden)document.getElementById('askFab').hidden=false;
   $$('nav.tabs a').forEach(a=>a.removeAttribute('aria-current'));
@@ -1618,6 +1662,7 @@ function route(){
   if(v==='concepts')openConcept(h.startsWith('c-')?h.slice(2):null);
   if(v==='prep')openPrep(h.startsWith('prep-')?h.slice(5):null);
   if(v==='scores')applyScores();
+  if(v==='grade')(async()=>{for(let k=0;k<100&&!window.NSMGradeTab;k++)await new Promise(r=>setTimeout(r,100));if(window.NSMGradeTab)window.NSMGradeTab($('#gtRoot'));else $('#gtRoot').innerHTML='<p class="note">채점 도구를 불러오지 못했어요. 새로고침해 주세요.</p>'})();
   if(v==='graph')loadD3().then(buildGraph);
   if(v==='overview'&&!overviewDone){overviewDone=true;renderOverview()}
   if(v!=='items')window.scrollTo({top:0});
@@ -1704,7 +1749,7 @@ function onbGuide(){const box=$('#onbBox');const mine=[...FAV.d.s].map(sName);
   <ol class="onb-steps">
    <li><span class="n">1</span><div><b>2027 대비부터</b><p>학교·계열(의예·약학·자연)을 고르면 예상 유형과 꼭 풀 기출(1·2·3순위)이 나와요.</p></div></li>
    <li><span class="n">2</span><div><b>문제 풀기</b><p>「필기」로 문제 위·연습장·답안지에 바로 쓸 수 있어요. 노트나 종이에 풀어도 좋아요.</p></div></li>
-   <li><span class="n">3</span><div><b>AI 채점</b><p>웹 답안지에 쓰거나, 「종이 답안」 PDF에 풀고 사진을 올리면 학교 채점 기준으로 채점·첨삭해 줘요. <strong>「AI 채점」은 한 번만 누르고 기다리세요.</strong> 버튼이 「채점 중 ○초」로 바뀌고 보통 1~2분 걸려요.</p></div></li>
+   <li><span class="n">3</span><div><b>AI 채점</b><p>웹 답안지에 쓰거나, 「종이 답안」 PDF에 풀고 사진을 올리면 학교 채점 기준으로 채점·첨삭해 줘요. <strong>「AI 채점」은 한 번만 누르고 기다리세요.</strong> 버튼이 「채점 중 ○초」로 바뀌고 보통 1~2분 걸려요. 학원·사설 실전 모의고사는 <b>「채점」 탭</b>에서 문제지·답안 사진을 올리고 학교를 고르면 돼요.</p></div></li>
    <li><span class="n">4</span><div><b>추가 학습</b><p>풀고 나면 「추가 학습」에서 관련 기출과 그 문제에 쓰인 발상·정석 논리를 이어서 봐요.</p></div></li>
    <li><span class="n">5</span><div><b>풀이 논리 · 개념 질문</b><p>「필수 개념」 맨 위 행동강령은 「이 조건이면 → 이렇게」로 정리돼 있어요. 개념 글에서 「개념 질문」으로 AI에게 물을 수 있어요.</p></div></li>
    <li><span class="n">6</span><div><b>문항 PDF</b><p>문제 화면의 「PDF」로 그 문항만, 「☆ 담기」(2027 대비는 순위별 「모두 담기」)로 모은 문항은 맨 위 「문항 PDF」에서 순서를 정해 한 파일로 만들어요. 다 되면 「PDF 받기」를 한 번 더 누르세요.</p></div></li>
@@ -1832,13 +1877,17 @@ function onbMaybe(){let seen=null;try{seen=localStorage.getItem('nsm:onb')}catch
 
 
 /* ---------- 문항 PDF: 담기 · 병합 · 저장 ---------- */
+const PSUB={get(){try{return JSON.parse(localStorage.getItem('nsm:pdfsub')||'{}')||{}}catch(e){return {}}},
+  set(o){try{localStorage.setItem('nsm:pdfsub',JSON.stringify(o))}catch(e){}},
+  put(id,p){const o=this.get();if(Array.isArray(p)&&p.length)o[id]=p;else delete o[id];this.set(o)}};
+const docPick=(doc,id)=>{const pk=PICKS&&doc&&PICKS[doc]&&PICKS[doc][id];return pk&&Array.isArray(pk.p)&&SUBQ&&SUBQ[id]?pk.p:null};
 const PDFQ={get(){try{const a=JSON.parse(localStorage.getItem('nsm:pdfq')||'[]');return Array.isArray(a)?a.filter(x=>ITEMS&&ITEMS[x]):[]}catch(e){return []}},
   set(a){try{localStorage.setItem('nsm:pdfq',JSON.stringify(a))}catch(e){}pdfSync()},
   has(id){return this.get().includes(id)},
   toggle(id){const a=this.get();const k=a.indexOf(id);if(k<0)a.push(id);else a.splice(k,1);this.set(a);return k<0},
   addMany(ids){const a=this.get();let n=0;for(const x of ids)if(!a.includes(x)){a.push(x);n++}this.set(a);return n},
   removeMany(ids){this.set(this.get().filter(x=>!ids.includes(x)))}};
-function pickBtn(id){const on=PDFQ.has(id);return `<button type="button" class="qpick" data-qpick="${id}" aria-pressed="${on}" title="PDF로 합칠 목록에 담기">${on?'★ 담음':'☆ 담기'}</button>`}
+function pickBtn(id,doc){const on=PDFQ.has(id);return `<button type="button" class="qpick" data-qpick="${id}"${doc?` data-doc="${doc}"`:''} aria-pressed="${on}" title="PDF로 합칠 목록에 담기">${on?'★ 담음':'☆ 담기'}</button>`}
 function pdfTitle(i){return `${disp(i.s)} ${i.y} ${kDisp(i)} · ${gDisp(i)} · ${qDisp(i.q)}`}
 function pdfSync(){const n=PDFQ.get().length;const e=$('#pdfN');if(e)e.textContent=n?` (${n})`:'';
   document.querySelectorAll('[data-qpick]').forEach(b=>{const on=PDFQ.has(+b.dataset.qpick);b.setAttribute('aria-pressed',on);b.textContent=on?'★ 담음':'☆ 담기'});
@@ -1846,26 +1895,26 @@ function pdfSync(){const n=PDFQ.get().length;const e=$('#pdfN');if(e)e.textConte
   if(typeof svCur!=='undefined'&&svCur){const on=PDFQ.has(svCur.id);$('#svPick').setAttribute('aria-pressed',on);$('#svPick').textContent=on?'★ 담음':'☆ 담기'}}
 // 카드 안 담기 버튼: 카드 열기보다 먼저 받는다
 document.addEventListener('click',e=>{const b=e.target.closest('[data-pqall],[data-pqpdf]');if(!b)return;e.preventDefault();
-  if(b.dataset.pqpdf){pdfMake(b.dataset.pqpdf.split(',').map(Number),{ans:pdfOpt('ans'),pb:pdfOpt('pb')},b);return}
-  const ids=b.dataset.pqall.split(',').map(Number);if(b.getAttribute('aria-pressed')==='true')PDFQ.removeMany(ids);else{const n=PDFQ.addMany(ids);pdfToast(n?`${n}문항을 담았어요. 맨 위 「문항 PDF」에서 합쳐 저장하세요.`:'이미 모두 담겨 있어요.')}});
+  if(b.dataset.pqpdf){const ids=b.dataset.pqpdf.split(',').map(Number);const sub={};for(const x of ids){const p=docPick(b.dataset.doc,x);if(p)sub[x]=p}pdfMake(ids,{ans:pdfOpt('ans'),pb:pdfOpt('pb'),sub},b);return}
+  const ids=b.dataset.pqall.split(',').map(Number);if(b.getAttribute('aria-pressed')==='true'){PDFQ.removeMany(ids);for(const x of ids)PSUB.put(x,null)}else{const q0=PDFQ.get();for(const x of ids)if(!q0.includes(x))PSUB.put(x,docPick(b.dataset.doc,x));const n=PDFQ.addMany(ids);pdfToast(n?`${n}문항을 담았어요. 맨 위 「문항 PDF」에서 합쳐 저장하세요.`:'이미 모두 담겨 있어요.')}});
 function pdfToast(t){let el=document.getElementById('pdfToast');if(!el){el=document.createElement('div');el.id='pdfToast';el.setAttribute('role','status');document.body.appendChild(el)}el.textContent=t;el.classList.add('on');clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('on'),2600)}
-document.addEventListener('click',e=>{const b=e.target.closest('[data-qpick]');if(!b)return;e.preventDefault();e.stopPropagation();PDFQ.toggle(+b.dataset.qpick)},true);
-$('#svPick').onclick=()=>{if(svCur)PDFQ.toggle(svCur.id)};
+document.addEventListener('click',e=>{const b=e.target.closest('[data-qpick]');if(!b)return;e.preventDefault();e.stopPropagation();const id=+b.dataset.qpick;if(PDFQ.toggle(id))PSUB.put(id,docPick(b.dataset.doc,id));else PSUB.put(id,null)},true);
+$('#svPick').onclick=()=>{if(svCur){PDFQ.toggle(svCur.id);PSUB.put(svCur.id,null)}};
 $('#svPdf').onclick=()=>{if(svCur)pdfMake([svCur.id],{ans:pdfOpt('ans'),pb:true},$('#svPdf'))};
 function pdfOpt(k){try{const v=localStorage.getItem('nsm:pdf:'+k);return k==='pb'?v!=='0':v==='1'}catch(e){return k==='pb'}}
 function pdfOptSet(k,v){try{localStorage.setItem('nsm:pdf:'+k,v?'1':'0')}catch(e){}}
 function pdfPanel(){const box=$('#pdfBox');const a=PDFQ.get();
   box.innerHTML=`<h3 id="pdfT">문항 PDF</h3><p class="sub">담은 문항을 순서대로 한 PDF로 합쳐요. 문제 화면이나 카드의 「☆ 담기」로 담아요.</p>
-  ${a.length?`<ol class="pdf-list">${a.map((id,k)=>{const i=ITEMS[id];return `<li><span class="no">${k+1}</span><span class="t">${esc(disp(i.s))} ${esc(i.y)} ${esc(kDisp(i))} · ${esc(qDisp(i.q))}<small>${esc(gDisp(i))} · ${esc(i.subj||'')}</small></span><button type="button" data-mv="${k}" data-d="-1" aria-label="위로" ${k?'':'disabled'}>↑</button><button type="button" data-mv="${k}" data-d="1" aria-label="아래로" ${k<a.length-1?'':'disabled'}>↓</button><button type="button" data-rm="${id}" aria-label="빼기">✕</button></li>`}).join('')}</ol>`:'<div class="empty" style="margin:10px 0">아직 담은 문항이 없어요.</div>'}
+  ${a.length?`<ol class="pdf-list">${a.map((id,k)=>{const i=ITEMS[id];return `<li><span class="no">${k+1}</span><span class="t">${esc(disp(i.s))} ${esc(i.y)} ${esc(kDisp(i))} · ${esc(qDisp(i.q))}${PSUB.get()[id]?` <b class="pq-sub">${esc(subLab(PSUB.get()[id]))}</b>`:''}<small>${esc(gDisp(i))} · ${esc(i.subj||'')}</small></span><button type="button" data-mv="${k}" data-d="-1" aria-label="위로" ${k?'':'disabled'}>↑</button><button type="button" data-mv="${k}" data-d="1" aria-label="아래로" ${k<a.length-1?'':'disabled'}>↓</button><button type="button" data-rm="${id}" aria-label="빼기">✕</button></li>`}).join('')}</ol>`:'<div class="empty" style="margin:10px 0">아직 담은 문항이 없어요.</div>'}
   <div class="pdf-opts"><label><input type="checkbox" id="pdfAns" ${pdfOpt('ans')?'checked':''}>예시답안·해설 포함</label><label><input type="checkbox" id="pdfPb" ${pdfOpt('pb')?'checked':''}>한 쪽에 한 문항(길면 줄여 맞춤)</label></div>
   <div class="onb-foot"><button type="button" class="btn" id="pdfClr" ${a.length?'':'disabled'}>모두 빼기</button><button type="button" class="btn" id="pdfX">닫기</button><button type="button" class="btn" id="pdfPrint" ${a.length?'':'disabled'} title="글자가 더 선명해요(컴퓨터 권장)">인쇄 창으로</button><button type="button" class="btn primary" id="pdfGo" ${a.length?'':'disabled'}>PDF 파일 만들기 (${a.length}문항)</button></div>`;
   $('#pdfAns').onchange=e=>pdfOptSet('ans',e.target.checked);$('#pdfPb').onchange=e=>pdfOptSet('pb',e.target.checked);
   box.querySelectorAll('[data-mv]').forEach(b=>b.onclick=()=>{const a=PDFQ.get(),k=+b.dataset.mv,d=+b.dataset.d;[a[k],a[k+d]]=[a[k+d],a[k]];PDFQ.set(a);pdfPanel()});
-  box.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{PDFQ.toggle(+b.dataset.rm);pdfPanel()});
-  $('#pdfClr').onclick=()=>{if(confirm('담은 문항을 모두 뺄까요?')){PDFQ.set([]);pdfPanel()}};
+  box.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{PDFQ.toggle(+b.dataset.rm);PSUB.put(+b.dataset.rm,null);pdfPanel()});
+  $('#pdfClr').onclick=()=>{if(confirm('담은 문항을 모두 뺄까요?')){PDFQ.set([]);PSUB.set({});pdfPanel()}};
   $('#pdfX').onclick=pdfClose;
-  $('#pdfGo').onclick=()=>pdfMake(PDFQ.get(),{ans:pdfOpt('ans'),pb:pdfOpt('pb')},$('#pdfGo'));
-  $('#pdfPrint').onclick=()=>pdfMake(PDFQ.get(),{ans:pdfOpt('ans'),pb:pdfOpt('pb'),print:true},$('#pdfPrint'))}
+  $('#pdfGo').onclick=()=>pdfMake(PDFQ.get(),{ans:pdfOpt('ans'),pb:pdfOpt('pb'),sub:PSUB.get()},$('#pdfGo'));
+  $('#pdfPrint').onclick=()=>pdfMake(PDFQ.get(),{ans:pdfOpt('ans'),pb:pdfOpt('pb'),print:true,sub:PSUB.get()},$('#pdfPrint'))}
 function pdfOpen(){$('#pdfp').hidden=false;pdfPanel();setTimeout(()=>{const g=$('#pdfGo');if(g)g.focus()},50)}
 function pdfClose(){$('#pdfp').hidden=true}
 $('#pdfBtn').onclick=pdfOpen;
@@ -1943,17 +1992,21 @@ function pdfReady(){if(!PDF_FILE)return;$('#pdfp').hidden=false;
 let PDF_RUN=false;
 async function pdfMake(ids,opt,btn){
   if(PDF_RUN||!ids.length)return;PDF_RUN=true;const lab=btn?btn.textContent:'';const area=$('#printArea');area.innerHTML='';
-  const so=showOrig;showOrig=false;
+  const so=showOrig;showOrig=false;await loadSubq();const SUB=opt.sub||{};
   try{
     const d=new Date();area.insertAdjacentHTML('beforeend',`<div class="pa-cover">논술 기출 지도 · ${ids.length}문항 · ${d.getFullYear()}.${d.getMonth()+1}.${d.getDate()}</div>`);
     for(let n=0;n<ids.length;n++){const i=ITEMS[ids[n]];if(!i)continue;if(btn)btn.textContent=`만드는 중 ${n+1}/${ids.length}`;
       const sec=document.createElement('section');sec.className='pa-item'+(opt.pb&&n>0?' pb':'');
-      sec.innerHTML=`<h2>${ids.length>1?(n+1)+'. ':''}${esc(pdfTitle(i))}</h2>`;area.appendChild(sec);
+      const pk=SUB[i.id]&&SUBQ[i.id]?SUB[i.id]:null;
+      sec.innerHTML=`<h2>${ids.length>1?(n+1)+'. ':''}${esc(pdfTitle(i))}${pk?` <span class="pa-sub">· ${esc(pk.join('·'))}번만</span>`:''}</h2>`;area.appendChild(sec);
       const o=ORIG[i.id]||{q:[],a:[]};const box=document.createElement('div');box.className='pages';sec.appendChild(box);
       if(QNONE[i.id]||!o.q.length){box.innerHTML=`<div class="typed"><p><b>문제 원문 없음</b> — 문항 요약: ${texInline(i.idea||'')}</p></div>`;if(window.MathJax&&MathJax.typesetPromise)await MathJax.typesetPromise([box]).catch(()=>{})}
-      else await showKeys(o.q,box);
+      else{const sq=pk?{subs:SUBQ[i.id],pick:pk}:null;await showKeys(o.q,box,sq?{slice:sq}:{});
+        if(sq&&!sq.ok){const ps=sec.querySelector('h2 .pa-sub');if(ps)ps.textContent=`· ${pk.join('·')}번을 푸세요(문제 전체 실음)`}}
       if(opt.ans&&o.a&&o.a.length){const s2=opt.pb?document.createElement('section'):sec;if(opt.pb){s2.className='pa-item pa-a pb';area.appendChild(s2)}
-        s2.insertAdjacentHTML('beforeend',`<h3 class="pa-ans">${opt.pb&&ids.length>1?(n+1)+'. ':''}예시답안·해설</h3>`);const b2=document.createElement('div');b2.className='pages';s2.appendChild(b2);await showKeys(o.a,b2)}}
+        const sl=pk?{subs:SUBQ[i.id],pick:pk}:null;
+        s2.insertAdjacentHTML('beforeend',`<h3 class="pa-ans">${opt.pb&&ids.length>1?(n+1)+'. ':''}예시답안·해설</h3>`);const b2=document.createElement('div');b2.className='pages';s2.appendChild(b2);await showKeys(o.a,b2,sl?{slice:sl}:{});
+        if(sl&&!sl.ok)s2.querySelector('h3.pa-ans').insertAdjacentHTML('beforeend',` <span class="pa-sub">(해설은 전체 — ${esc(pk.join('·'))} 부분을 보세요)</span>`)}}
     area.dataset.fit=opt.pb?'1':'';
     // 그림(figimg)은 나중에 채워지므로 다 채워질 때까지 기다린다(최대 10초)
     area.querySelectorAll('img').forEach(im=>{im.loading='eager'});  // 늦게 읽기(lazy) 그림은 숨긴 영역에서 안 읽힌다
