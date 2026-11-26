@@ -1316,6 +1316,7 @@ function markPrep(el){
     a.insertAdjacentHTML('afterend',st?` <span class="st ${st}">${ST_LAB[st]}</span>`:'')})
 }
 $('#pgrid').addEventListener('click',e=>{const st=e.target.closest('[data-pstar]');if(st){FAV.toggle('s',st.dataset.pstar);return}const b=e.target.closest('[data-p]');if(b)location.hash='prep-'+b.dataset.p});$('#pbackBtn').addEventListener('click',()=>{location.hash='prep'});$('#pbody').addEventListener('click',e=>{const b=e.target.closest('[data-pt]');if(b)location.hash='prep-'+b.dataset.pt});
+document.addEventListener('click',async e=>{const a=e.target.closest('a[href^="#f-"]');if(!a)return;e.preventDefault();const path=a.getAttribute('href').slice(3);const t=a.textContent;a.textContent='받는 중…';try{const r=await fetch(path);if(!r.ok)throw 0;const b=new Blob([await r.arrayBuffer()],{type:'application/pdf'});await window.NSMSaveBlob(b,path.split('/').pop())}catch(_){alert('파일을 받지 못했어요. 인터넷 연결을 확인하고 다시 눌러 주세요.')}a.textContent=t});
 document.addEventListener('click',e=>{const a=e.target.closest('a[href^="#q-"]');if(!a)return;e.preventDefault();
   const id=+a.getAttribute('href').slice(3);if(!ITEMS[id])return;
   const scope=a.closest('.doc')||document;const ids=[...new Set([...scope.querySelectorAll('a[href^="#q-"]')].map(x=>+x.getAttribute('href').slice(3)))].filter(x=>ITEMS[x]);
